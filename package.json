@@ -1,17 +1,17 @@
 {
   "name": "aero-dock",
-  "version": "1.3.2",
+  "version": "1.3.2-zh.1",
   "private": true,
-  "description": "A modern free and open-source RocketDock and Nexus Dock alternative for Windows 10 and 11. Live window previews, Aero glass, cursor magnification, and full desktop customization, in the Frutiger Aero design language.",
+  "description": "Simplified Chinese application dock for Windows with window previews and desktop integration.",
   "license": "MIT",
   "author": "Ryan Panda",
-  "homepage": "https://github.com/TheAgencyMGE/aero-dock",
+  "homepage": "https://github.com/linyuYL/aero-dock",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TheAgencyMGE/aero-dock.git"
+    "url": "git+https://github.com/linyuYL/aero-dock.git"
   },
   "bugs": {
-    "url": "https://github.com/TheAgencyMGE/aero-dock/issues"
+    "url": "https://github.com/linyuYL/aero-dock/issues"
   },
   "keywords": [
     "windows",

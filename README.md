@@ -22,9 +22,9 @@ Built in the Frutiger Aero design language: pin your apps to a floating pane
 of glass, watch icons grow under the cursor, and let light drift across the
 whole thing.
 
-[![Latest release](https://img.shields.io/github/v/release/TheAgencyMGE/aero-dock?label=download&color=2f9de3)](https://github.com/TheAgencyMGE/aero-dock/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/TheAgencyMGE/aero-dock/total?label=downloads&color=145a9e)](https://github.com/TheAgencyMGE/aero-dock/releases)
-[![CI](https://github.com/TheAgencyMGE/aero-dock/actions/workflows/ci.yml/badge.svg)](https://github.com/TheAgencyMGE/aero-dock/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/linyuYL/aero-dock?include_prereleases&label=download&color=2f9de3)](https://github.com/linyuYL/aero-dock/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/linyuYL/aero-dock/total?label=downloads&color=145a9e)](https://github.com/linyuYL/aero-dock/releases)
+[![CI](https://github.com/linyuYL/aero-dock/actions/workflows/ci.yml/badge.svg)](https://github.com/linyuYL/aero-dock/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-7ad03a)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows%2010%20%7C%2011-0d3a5c)](#requirements)
 
@@ -132,7 +132,7 @@ Its last release was 2008.
 ## Install
 
 Grab the installer from the
-[latest release](https://github.com/TheAgencyMGE/aero-dock/releases/latest) and
+[latest release](https://github.com/linyuYL/aero-dock/releases/latest) and
 run it. It installs per user, so no admin rights.
 
 Aero Dock lives in your system tray. Left click the tray icon to show or hide

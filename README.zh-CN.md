@@ -2,6 +2,8 @@
 
 本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，原作者为 Ryan Panda.
 
+发布版本为 `v1.3.2-zh.1`，下载入口见 [Releases](https://github.com/linyuYL/aero-dock/releases)。安装版文件以 `-setup.exe` 结尾；便携版文件以 `-portable.zip` 结尾，解压后运行 `Aero Dock.exe`，并将 `portable.txt` 与程序放在一起。两种发布包均附带 MIT 许可证。
+
 对dock风格做出了一些改变,并将默认语言翻译为中文<img width="695" height="76" alt="image" src="https://github.com/user-attachments/assets/5e29daa8-99ad-4e06-bdc1-b678d7e4b814" />
 <img width="399" height="292" alt="image" src="https://github.com/user-attachments/assets/fd2f85fb-04db-429f-a602-d955733a0c4b" />
 
