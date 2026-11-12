@@ -1,8 +1,11 @@
 # Aero Dock 简体中文版
 
-本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，原作者为 Ryan Panda，由 [linyuYL](https://github.com/linyuYL) 维护简体中文桌面坞版本，遵循 [MIT 许可证](LICENSE)。
+本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，原作者为 Ryan Panda.
 
-无底板桌面坞只显示固定的入口和运行中的应用，支持悬停放大、图标倒影和窗口预览。设置可从托盘或应用右键菜单打开。
+对dock风格做出了一些改变,并将默认语言翻译为中文<img width="695" height="76" alt="image" src="https://github.com/user-attachments/assets/5e29daa8-99ad-4e06-bdc1-b678d7e4b814" />
+<img width="399" height="292" alt="image" src="https://github.com/user-attachments/assets/fd2f85fb-04db-429f-a602-d955733a0c4b" />
+
+
 
 固定项目支持导入应用、网页、快捷方式、文件和文件夹，并可重命名及更换图标。运行中的单窗口应用可点击切换前台与最小化，多窗口应用可通过预览选择窗口。
 
