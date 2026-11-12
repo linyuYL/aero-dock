@@ -15,13 +15,13 @@ export interface Theme {
 export const THEMES: Theme[] = [
   {
     id: "aero",
-    name: "Aero",
+    name: "Aero 玻璃",
     preview: ["#7ec9e8", "#2f9de3"],
     tokens: {}, // the defaults in tokens.css ARE the Aero theme
   },
   {
     id: "ocean",
-    name: "Ocean",
+    name: "海洋",
     preview: ["#4fc3dd", "#0b5e8e"],
     tokens: {
       "--aero-accent": "#1ba7c9",
@@ -37,7 +37,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "forest",
-    name: "Forest",
+    name: "森林",
     preview: ["#9adf6e", "#2e7d32"],
     tokens: {
       "--aero-accent": "#5cb84a",
@@ -55,7 +55,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "aurora",
-    name: "Aurora",
+    name: "极光",
     preview: ["#8ef0c8", "#5a4fcf"],
     tokens: {
       "--aero-accent": "#7c6cf0",
@@ -73,7 +73,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "sunset",
-    name: "Sunset",
+    name: "落日",
     preview: ["#ffc06e", "#e0526d"],
     tokens: {
       "--aero-accent": "#f2884b",
@@ -91,7 +91,7 @@ export const THEMES: Theme[] = [
   },
   {
     id: "night",
-    name: "Night",
+    name: "夜色",
     preview: ["#39456e", "#0c101f"],
     tokens: {
       "--aero-accent": "#5a78c8",

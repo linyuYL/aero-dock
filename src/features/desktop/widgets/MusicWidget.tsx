@@ -62,7 +62,7 @@ export function MusicWidget(_: WidgetProps) {
   };
 
   if (!track?.active) {
-    return <div className="w-empty">Nothing playing</div>;
+    return <div className="w-empty">没有正在播放的内容</div>;
   }
 
   return (
@@ -72,7 +72,7 @@ export function MusicWidget(_: WidgetProps) {
           {track.title}
         </div>
         <div className="w-music-artist" title={track.artist}>
-          {track.artist || track.album || "Unknown artist"}
+          {track.artist || track.album || "未知艺人"}
         </div>
       </div>
       <div className="w-music-controls">
@@ -81,7 +81,7 @@ export function MusicWidget(_: WidgetProps) {
             key={action}
             className="w-music-btn"
             data-primary={action === "playpause"}
-            aria-label={action === "playpause" ? (track.playing ? "Pause" : "Play") : action}
+            aria-label={action === "playpause" ? (track.playing ? "暂停" : "播放") : action === "previous" ? "上一首" : "下一首"}
             // the frame drags on pointerdown, so a button press must not
             // also start moving the widget
             onPointerDown={(e) => e.stopPropagation()}

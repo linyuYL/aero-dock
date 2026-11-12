@@ -55,6 +55,7 @@ export function AeroToggle({ label, checked, onChange, hint }: ToggleProps) {
       <button
         className="ctl-toggle"
         role="switch"
+        aria-label={label}
         aria-checked={checked}
         data-on={checked}
         onClick={() => onChange(!checked)}

@@ -40,7 +40,7 @@ export function ClockWidget({ widget }: WidgetProps) {
         </div>
         {!twentyFourHour && <div className="w-clock-meridiem">{h < 12 ? "AM" : "PM"}</div>}
         <div className="w-clock-date">
-          {now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          {now.toLocaleDateString("zh-CN", { weekday: "long", month: "long", day: "numeric" })}
         </div>
       </div>
     );

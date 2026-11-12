@@ -45,7 +45,7 @@ function ControlButton({
 
 export function SearchButton({ onClick }: { onClick: () => void }) {
   return (
-    <ControlButton label="Search apps and files" onClick={onClick}>
+    <ControlButton label="搜索应用和文件" onClick={onClick}>
       <Gloss id="ad-search" />
       {/* lens: translucent glass with a lit rim */}
       <circle cx="10.4" cy="10.4" r="6.3" fill="rgba(255,255,255,0.3)" />
@@ -82,7 +82,7 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
 export function SettingsButton({ onClick }: { onClick: () => void }) {
   const teeth = [0, 45, 90, 135, 180, 225, 270, 315];
   return (
-    <ControlButton label="Aero Dock settings" onClick={onClick}>
+    <ControlButton label="Aero Dock 设置" onClick={onClick}>
       <Gloss id="ad-gear" />
       <g fill="url(#ad-gear-body)">
         {teeth.map((angle) => (

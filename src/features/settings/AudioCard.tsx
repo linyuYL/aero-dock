@@ -32,17 +32,16 @@ export function AudioCard({ settings, onStatus }: Props) {
 
   return (
     <section className="settings-card glass">
-      <h2>App volume</h2>
+      <h2>应用音量</h2>
       <p className="settings-note">
-        Scroll an app on the dock to change its volume, or middle-click to
-        mute it. Right-click an icon to pick an output.
+        在桌面坞的应用图标上滚动鼠标滚轮可调整音量，按中键可静音，右键可选择输出设备。
       </p>
 
       {apps.length === 0 ? (
         <p className="settings-note">
-          Nothing is playing audio right now.{" "}
+          当前没有应用在播放声音。{" "}
           <button className="aero-button-link" onClick={() => void refresh()}>
-            Check again
+            重新检查
           </button>
         </p>
       ) : (
@@ -62,12 +61,12 @@ export function AudioCard({ settings, onStatus }: Props) {
                 className="aero-button"
                 onClick={() => void toggleMute(app.exe)}
               >
-                {app.muted ? "Unmute" : "Mute"}
+                {app.muted ? "取消静音" : "静音"}
               </button>
             </div>
           ))}
           <button className="aero-button" onClick={() => void refresh()}>
-            Refresh
+            刷新
           </button>
         </>
       )}
@@ -75,26 +74,24 @@ export function AudioCard({ settings, onStatus }: Props) {
       {activeMode && (
         <p className="settings-note">
           {activeMode.audio.length === 0
-            ? `${activeMode.name} has not remembered any volumes yet. Changing one stores it here.`
-            : `${activeMode.name} remembers ${activeMode.audio.length} app volume${
-                activeMode.audio.length === 1 ? "" : "s"
-              } and puts them back when you switch to it.`}
+            ? `“${activeMode.name}”尚未保存任何音量设置。调整应用音量后会自动保存。`
+            : `“${activeMode.name}”记录了 ${activeMode.audio.length} 个应用的音量，切换到此模式时会恢复。`}
         </p>
       )}
 
       {!settings.modes.enabled && (
         <p className="settings-note">
-          Turn on Modes to have these volumes restored automatically.{" "}
+          启用模式后可自动恢复这些音量设置。{" "}
           <button
             className="aero-button-link"
             onClick={() =>
               ipc
                 .enableModes(true)
-                .then(() => onStatus("ok", "Modes are on."))
-                .catch((e) => onStatus("error", `Could not turn on modes: ${e}`))
+                .then(() => onStatus("ok", "已启用模式。"))
+                .catch((e) => onStatus("error", `无法启用模式：${e}`))
             }
           >
-            Turn on Modes
+            启用模式
           </button>
         </p>
       )}

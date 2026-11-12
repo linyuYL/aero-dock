@@ -35,7 +35,7 @@ export function Toasts({ edge }: { edge: DockEdge }) {
             exit={{ opacity: 0, scale: 0.94, filter: "blur(5px)", transition: { duration: 0.2 } }}
             transition={springs.bloom}
             onClick={() => dismiss(toast.id)}
-            title="Dismiss"
+            title="关闭提示"
           >
             {toast.message}
           </motion.button>

@@ -19,15 +19,15 @@ interface Props {
 
 /** "just now", "12 minutes ago", "3 days ago". */
 function savedAgo(capturedAt: number): string {
-  if (capturedAt === 0) return "nothing saved yet";
+  if (capturedAt === 0) return "尚未保存";
   const seconds = Math.max(0, Math.floor(Date.now() / 1000) - capturedAt);
-  if (seconds < 60) return "saved just now";
+  if (seconds < 60) return "刚刚保存";
   const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `saved ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  if (minutes < 60) return `${minutes} 分钟前保存`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `saved ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  if (hours < 24) return `${hours} 小时前保存`;
   const days = Math.floor(hours / 24);
-  return `saved ${days} day${days === 1 ? "" : "s"} ago`;
+  return `${days} 天前保存`;
 }
 
 function ModeRow({
@@ -44,7 +44,7 @@ function ModeRow({
   const [glyph, setGlyph] = useState(mode.glyph);
   const [apps, setApps] = useState(mode.autoSwitchApps.join(", "));
 
-  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}: ${e}`);
+  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}：${e}`);
 
   return (
     <div className="mode-card" data-active={active}>
@@ -58,23 +58,23 @@ function ModeRow({
         <div className="mode-card-title">
           <strong>{mode.name}</strong>
           <span className="mode-card-meta">
-            {mode.pinned.length} pinned · {mode.workspace.windows.length} windows ·{" "}
+            {mode.pinned.length} 个固定项目 · {mode.workspace.windows.length} 个窗口 ·{" "}
             {mode.audio.length} volumes
           </span>
         </div>
         {active ? (
-          <span className="mode-card-badge">Active</span>
+          <span className="mode-card-badge">使用中</span>
         ) : (
           <button
             className="aero-button"
             onClick={() =>
               ipc
                 .switchMode(mode.id)
-                .then((r) => onStatus("ok", `Switched to ${r.modeName}.`))
-                .catch(fail("Could not switch"))
+                .then((r) => onStatus("ok", `已切换到“${r.modeName}”。`))
+                .catch(fail("无法切换模式"))
             }
           >
-            Switch to
+            切换到此模式
           </button>
         )}
       </div>
@@ -87,11 +87,11 @@ function ModeRow({
           onClick={() =>
             ipc
               .captureWorkspace(mode.id)
-              .then(() => onStatus("ok", `Saved the open windows to ${mode.name}.`))
-              .catch(fail("Could not save the workspace"))
+              .then(() => onStatus("ok", `已将打开的窗口保存到“${mode.name}”。`))
+              .catch(fail("无法保存工作区"))
           }
         >
-          Save windows
+          保存窗口
         </button>
         <button
           className="aero-button"
@@ -102,16 +102,16 @@ function ModeRow({
               .then((r) =>
                 onStatus(
                   "ok",
-                  `Placed ${r.moved} window${r.moved === 1 ? "" : "s"}` +
-                    (r.launched > 0 ? `, opened ${r.launched}` : "") +
-                    (r.missing > 0 ? `, ${r.missing} could not be restored` : "") +
+                  `已摆放 ${r.moved} 个窗口` +
+                    (r.launched > 0 ? `，已打开 ${r.launched} 个应用` : "") +
+                    (r.missing > 0 ? `，${r.missing} 个窗口无法恢复` : "") +
                     ".",
                 ),
               )
-              .catch(fail("Could not restore the workspace"))
+              .catch(fail("无法恢复工作区"))
           }
         >
-          Restore windows
+          恢复窗口
         </button>
         <button
           className="aero-button"
@@ -119,21 +119,21 @@ function ModeRow({
           onClick={() =>
             ipc
               .clearWorkspace(mode.id)
-              .then(() => onStatus("ok", `Cleared the saved windows for ${mode.name}.`))
-              .catch(fail("Could not clear the workspace"))
+              .then(() => onStatus("ok", `已清除“${mode.name}”保存的窗口。`))
+              .catch(fail("无法清除工作区"))
           }
         >
-          Clear
+          清除
         </button>
         <button className="aero-button" onClick={() => setEditing((v) => !v)}>
-          {editing ? "Done" : "Edit"}
+          {editing ? "完成" : "编辑"}
         </button>
       </div>
 
       {editing && (
         <div className="mode-card-edit">
           <label className="ctl-row">
-            <span className="ctl-label">Name</span>
+            <span className="ctl-label">名称</span>
             <input
               className="ctl-text"
               value={name}
@@ -141,23 +141,23 @@ function ModeRow({
               onBlur={() =>
                 ipc
                   .renameMode(mode.id, name, glyph)
-                  .catch(fail("Could not rename"))
+                  .catch(fail("无法重命名"))
               }
             />
           </label>
           <div className="mode-icon-field">
-            <span className="ctl-label">Tile icon</span>
+            <span className="ctl-label">磁贴图标</span>
             <ModeIconPicker
               name={name}
               glyph={glyph}
               onChange={(next) => {
                 setGlyph(next);
-                ipc.renameMode(mode.id, name, next).catch(fail("Could not save the icon"));
+                ipc.renameMode(mode.id, name, next).catch(fail("无法保存图标"));
               }}
             />
           </div>
           <label className="ctl-row ctl-row-stacked">
-            <span className="ctl-label">Switch to this mode for</span>
+            <span className="ctl-label">为这些应用切换到此模式</span>
             <input
               className="ctl-text"
               value={apps}
@@ -172,13 +172,12 @@ function ModeRow({
                       .map((a) => a.trim())
                       .filter(Boolean),
                   )
-                  .catch(fail("Could not save the app list"))
+                  .catch(fail("无法保存应用列表"))
               }
             />
           </label>
           <p className="settings-note">
-            Comma separated executable names. Bringing one of them to the front
-            switches to this mode while automatic switching is on.
+            用逗号分隔可执行文件名。开启自动切换后，将其中一个应用切到前台就会切换到此模式。
           </p>
           <div className="mode-card-actions">
             <button
@@ -186,11 +185,11 @@ function ModeRow({
               onClick={() =>
                 ipc
                   .deleteMode(mode.id)
-                  .then(() => onStatus("ok", `Deleted ${mode.name}.`))
-                  .catch(fail("Could not delete the mode"))
+                  .then(() => onStatus("ok", `已删除“${mode.name}”。`))
+                  .catch(fail("无法删除模式"))
               }
             >
-              Delete mode
+              删除模式
             </button>
           </div>
         </div>
@@ -205,11 +204,11 @@ export function ModesCard({ settings, onStatus }: Props) {
 
   return (
     <section className="settings-card glass">
-      <h2>Modes</h2>
+      <h2>模式</h2>
       <AeroToggle
-        label="Use modes"
+        label="使用模式"
         checked={modes.enabled}
-        hint="Each mode keeps its own pinned apps, window layout and per-app volumes"
+        hint="每个模式分别保存固定应用、窗口布局和应用音量"
         onChange={(v) =>
           ipc
             .enableModes(v)
@@ -217,40 +216,39 @@ export function ModesCard({ settings, onStatus }: Props) {
               onStatus(
                 "ok",
                 v
-                  ? "Modes are on. Your current dock became the first one."
-                  : "Modes are off. The dock keeps the pins it is showing.",
+                  ? "已启用模式，当前桌面坞已保存为第一个模式。"
+                  : "已关闭模式，桌面坞保留当前显示的固定项目。",
               ),
             )
-            .catch((e) => onStatus("error", `Could not change modes: ${e}`))
+            .catch((e) => onStatus("error", `无法更改模式设置：${e}`))
         }
       />
 
       {modes.enabled && (
         <>
           <AeroToggle
-            label="Also put windows back when switching"
+            label="切换时也恢复窗口布局"
             checked={modes.restoreWorkspaceOnSwitch}
-            hint="Moves open windows and reopens closed apps to match the mode"
+            hint="移动现有窗口并重新打开已关闭的应用，以恢复该模式的布局"
             onChange={(v) =>
               ipc
                 .setRestoreWorkspaceOnSwitch(v)
-                .catch((e) => onStatus("error", `Could not change that: ${e}`))
+                .catch((e) => onStatus("error", `无法更改设置：${e}`))
             }
           />
           <AeroToggle
-            label="Switch automatically by app"
+            label="按应用自动切换"
             checked={modes.autoSwitch}
-            hint="Follows the app you bring to the front into the mode that claims it"
+            hint="将应用切到前台时，自动切换到为该应用指定的模式"
             onChange={(v) =>
               ipc
                 .setAutoSwitch(v)
-                .catch((e) => onStatus("error", `Could not change that: ${e}`))
+                .catch((e) => onStatus("error", `无法更改设置：${e}`))
             }
           />
           {modes.autoSwitch && (
             <p className="settings-note">
-              An automatic switch changes pins and volumes only. It never moves
-              your windows, which would fight the app you just clicked on.
+              自动切换只会更改固定项目和音量。当前窗口位置保持不变。
             </p>
           )}
 
@@ -266,12 +264,12 @@ export function ModesCard({ settings, onStatus }: Props) {
           </div>
 
           <div className="ctl-row">
-            <span className="ctl-label">New mode</span>
+            <span className="ctl-label">新建模式</span>
             <div className="ctl-actions">
               <input
                 className="ctl-text ctl-text-mid"
                 value={newName}
-                placeholder="Gaming"
+                placeholder="游戏"
                 onChange={(e) => setNewName(e.target.value)}
               />
               <button
@@ -281,13 +279,13 @@ export function ModesCard({ settings, onStatus }: Props) {
                   ipc
                     .createMode(newName.trim(), null, false)
                     .then(() => {
-                      onStatus("ok", `Added ${newName.trim()}.`);
+                      onStatus("ok", `已添加“${newName.trim()}”。`);
                       setNewName("");
                     })
-                    .catch((e) => onStatus("error", `Could not add the mode: ${e}`))
+                    .catch((e) => onStatus("error", `无法添加模式：${e}`))
                 }
               >
-                Add empty
+                添加空白模式
               </button>
               <button
                 className="aero-button"
@@ -296,19 +294,18 @@ export function ModesCard({ settings, onStatus }: Props) {
                   ipc
                     .createMode(newName.trim(), null, true)
                     .then(() => {
-                      onStatus("ok", `Added ${newName.trim()} with the current pins.`);
+                      onStatus("ok", `已用当前固定项目创建“${newName.trim()}”。`);
                       setNewName("");
                     })
-                    .catch((e) => onStatus("error", `Could not add the mode: ${e}`))
+                    .catch((e) => onStatus("error", `无法添加模式：${e}`))
                 }
               >
-                Copy current
+                复制当前模式
               </button>
             </div>
           </div>
           <p className="settings-note">
-            A new mode starts with the first letter of its name on the tile.
-            Open <strong>Edit</strong> on it to pick an icon.
+            新模式默认使用名称的首字作为图标。点击 <strong>编辑</strong> 即可更换图标。
           </p>
         </>
       )}

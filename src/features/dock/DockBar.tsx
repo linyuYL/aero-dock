@@ -1,8 +1,8 @@
 /**
- * The dock bar: a glass shelf of icons. Owns the cursor motion value the
+ * The dock bar: a row of app icons. Owns the cursor motion value the
  * icons magnify against, drag-reordering of the pinned section, and the
- * deterministic window-size report to Rust (window = dock + magnification
- * headroom + tooltip space + flyout space when a menu is open).
+ * deterministic window-size report to Rust, with room for flyouts reserved
+ * so opening a preview does not resize the transparent window.
  */
 
 import { AnimatePresence, motion, Reorder, useMotionValue } from "motion/react";
@@ -16,11 +16,7 @@ import type { DockItemView } from "../../state/dockStore";
 import { useAmbient } from "../../state/ambientStore";
 import { useFileDrag } from "../../state/dragStore";
 import { Welcome } from "../onboarding/Welcome";
-import { SEARCH_PANEL, SearchOverlay, useSearch } from "../search/SearchOverlay";
-import { WidgetCluster } from "../widgets/WidgetCluster";
 import { ContextMenu } from "./ContextMenu";
-import { SearchButton, SettingsButton } from "./DockControls";
-import { MODE_FLYOUT_HEIGHT, ModeSwitcher, useModeSwitcher } from "./ModeSwitcher";
 import { DockIcon } from "./DockIcon";
 import { FolderFlyout } from "./FolderFlyout";
 import { StackFlyout } from "./StackFlyout";
@@ -34,11 +30,8 @@ const PAD_CROSS = 10; // dock padding across the axis
 const LABEL_SPACE = 44; // tooltip pill above icons (horizontal dock)
 const LABEL_SPACE_SIDE = 150; // tooltip pill beside icons (vertical dock)
 const EDGE_SLACK = 24; // window slack so magnified end-icons never clip
-const MENU_SPACE = 360; // extra cross-axis room while a context menu is open
-const FLYOUT_GAP = 16; // breathing room between a flyout and the window edge
+const MENU_SPACE = 460; // extra cross-axis room while a context menu is open
 const TOAST_SPACE = 210; // extra cross-axis room while toasts are on screen
-const WIDGET_SPACE = 190; // clock + status glyphs + search & gear buttons
-const MODE_TILE_SPACE = 38; // the Modes tile, when Modes is switched on
 const REVEAL_STRIP = 8; // window height while auto-hidden (mouse sensor)
 // fallback only; the real delay is settings.dock.autoHideDelayMs
 const HIDE_ANIM_MS = 380;
@@ -76,12 +69,8 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
   }, [order, pinnedItems]);
 
   const peak = magnification ? magnificationScale : 1;
-  const searchOpen = useSearch((s) => s.open);
-  const setSearchOpen = useSearch((s) => s.setOpen);
   const welcomeOpen = !settings.onboardingComplete && pinnedItems.length === 0;
-  const modesOpen = useModeSwitcher((m) => m.open);
-  const modesOn = settings.modes.enabled && settings.modes.modes.length > 0;
-  const menuOpen = menu.item !== null || searchOpen || welcomeOpen || modesOpen;
+  const menuOpen = menu.item !== null || welcomeOpen;
   // toasts sit in the band above the dock, which is only tall enough for a
   // tooltip — without extra room the window would clip them
   const toastCount = useToasts((s) => s.items.length);
@@ -155,49 +144,36 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
     const mainBase = n * iconSize + (n - 1 + dividers) * GAP + dividers * 8 + PAD_MAIN * 2;
     // neighbors near the cursor grow too; ~2.5 icons' worth covers the worst case
     const mainGrowth = iconSize * (peak - 1) * 2.5;
-    const main =
-      mainBase + mainGrowth + EDGE_SLACK + WIDGET_SPACE + (modesOn ? MODE_TILE_SPACE : 0);
+    const main = Math.max(mainBase + mainGrowth + EDGE_SLACK, items.length === 0 ? 180 : 0);
     const label = vertical ? LABEL_SPACE_SIDE : LABEL_SPACE;
-    // The dock band itself: icons at full magnification plus tooltip room.
     const band = iconSize * peak + PAD_CROSS * 2 + label;
-    // Open surfaces are taller than the band. Each reports the total cross
-    // size it needs, and the window takes the largest. The search overlay
-    // is measured from its own geometry rather than a shared guess, because
-    // a guess that is too small silently clips its input off the top.
-    const crossFull = Math.max(
-      band,
-      menu.item !== null || welcomeOpen ? band + MENU_SPACE : 0,
-      // the mode flyout is taller than the tooltip band it hangs off
-      modesOpen ? band + MODE_FLYOUT_HEIGHT + FLYOUT_GAP : 0,
-      searchOpen
-        ? SEARCH_PANEL.offsetFor(iconSize) + SEARCH_PANEL.height + FLYOUT_GAP
-        : 0,
-      toastCount > 0 ? band + TOAST_SPACE : 0,
-    );
-    const cross = windowShrunk ? REVEAL_STRIP : crossFull;
-    return vertical ? { width: cross, height: main } : { width: main, height: cross };
+    const fullMain = Math.max(main, 460);
+    const fullCross = band + MENU_SPACE;
+    const visibleMain = menuOpen ? fullMain : main;
+    const visibleCross = windowShrunk ? REVEAL_STRIP
+      : menuOpen ? fullCross : band + (toastCount > 0 ? TOAST_SPACE : 0);
+    return vertical
+      ? { width: fullCross, height: fullMain, visibleWidth: visibleCross, visibleHeight: visibleMain }
+      : { width: fullMain, height: fullCross, visibleWidth: visibleMain, visibleHeight: visibleCross };
   }, [
     items.length,
     runningItems.length,
     iconSize,
     peak,
     vertical,
-    menu.item,
-    searchOpen,
-    welcomeOpen,
+    menuOpen,
     toastCount,
     windowShrunk,
-    modesOn,
-    modesOpen,
   ]);
 
+  const { width, height, visibleWidth, visibleHeight } = windowSize;
   useEffect(() => {
-    ipc.resizeDock(windowSize.width, windowSize.height).catch((e) => {
+    ipc.resizeDock(width, height, visibleWidth, visibleHeight).catch((e) => {
       // geometry is re-sent on every layout change; a single miss is
       // self-healing, so log it rather than interrupting the user
       console.warn("resize_dock failed", e);
     });
-  }, [windowSize.width, windowSize.height]);
+  }, [width, height, visibleWidth, visibleHeight]);
 
   const handleMove = useCallback(
     (e: React.MouseEvent) => {
@@ -226,11 +202,6 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
       }
       if (item.kind === "stack" && target) {
         menu.open("stack", item, anchorFor(target));
-        return;
-      }
-      // several windows: show them instead of blind-cycling
-      if (item.windows.length > 1 && target) {
-        menu.open("windows", item, anchorFor(target));
         return;
       }
       onLaunch(item);
@@ -266,25 +237,21 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
     <div
       className="dock-viewport"
       data-edge={edge}
-      data-asleep={asleep}
+      style={{
+        "--icon-size": iconSize + "px",
+        "--reflection-strength": settings.appearance.reflectionStrength,
+      } as React.CSSProperties}
       onMouseEnter={() => setPointerInside(true)}
       onMouseLeave={() => setPointerInside(false)}
     >
       <motion.div
-        className="dock-bar glass glass-open"
+        className="dock-bar"
         data-vertical={vertical}
         animate={hidden ? { ...slideOut, opacity: 0.6 } : { x: 0, y: 0, opacity: 1 }}
         transition={springs.slide}
         onMouseMove={handleMove}
         onMouseLeave={handleLeave}
       >
-        {/* the bar can't clip itself (tooltips float above it), so the
-            ambient sweep gets its own clipping layer */}
-        <span className="glass-sweep" aria-hidden />
-        <ModeSwitcher settings={settings} edge={edge} />
-        {settings.dock.showSearchButton && (
-          <SearchButton onClick={() => setSearchOpen(!searchOpen)} />
-        )}
         <Reorder.Group
           as="div"
           className="dock-section"
@@ -292,7 +259,7 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
           values={order}
           onReorder={setOrder}
         >
-          {orderedPinned.map((item, i) => (
+          {orderedPinned.map((item) => (
             <Reorder.Item
               as="div"
               key={item.id}
@@ -310,7 +277,7 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
                 mouseAxis.set(Infinity);
               }}
               onDragEnd={() => {
-                ipc.reorderPinned(order).catch(notify.on("Could not save the new order"));
+                ipc.reorderPinned(order).catch(notify.on("无法保存新顺序"));
                 setDragging(false);
                 // let the trailing click event pass before re-enabling launch
                 setTimeout(() => {
@@ -318,32 +285,22 @@ export function DockBar({ settings, items, onLaunch }: DockBarProps) {
                 }, 50);
               }}
             >
-              <DockIcon item={item} index={i} {...iconProps} />
+              <DockIcon item={item} {...iconProps} />
             </Reorder.Item>
           ))}
         </Reorder.Group>
         {runningItems.length > 0 && <span className="dock-divider" aria-hidden />}
-        {runningItems.map((item, i) => (
-          <DockIcon key={item.id} item={item} index={orderedPinned.length + i} {...iconProps} />
+        {runningItems.map((item) => (
+          <DockIcon key={item.id} item={item} {...iconProps} />
         ))}
-        {(settings.dock.showClock || settings.dock.showSystemStatus) && (
-          <span className="dock-divider" aria-hidden />
-        )}
-        <WidgetCluster
-          showClock={settings.dock.showClock}
-          showStatus={settings.dock.showSystemStatus}
-        />
-        {settings.dock.showSettingsButton && (
-          <SettingsButton
-            onClick={() => ipc.openSettings().catch(notify.on("Could not open settings"))}
-          />
+        {items.length === 0 && !welcomeOpen && (
+          <div className="dock-drop-target">拖入应用快捷方式</div>
         )}
       </motion.div>
       <ContextMenu settings={settings} edge={edge} />
       <FolderFlyout edge={edge} />
       <StackFlyout edge={edge} />
       <WindowsFlyout edge={edge} />
-      <SearchOverlay edge={edge} />
       <Toasts edge={edge} />
       <AnimatePresence>{welcomeOpen && <Welcome edge={edge} />}</AnimatePresence>
     </div>

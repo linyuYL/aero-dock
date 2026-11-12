@@ -57,7 +57,7 @@ function filterResults(query: string, apps: AppEntry[], recent: RecentFile[]): R
   if (q) {
     for (const a of apps) {
       if (a.name.toLowerCase().includes(q)) {
-        rows.push({ kind: "app", name: a.name, detail: "Application", path: a.targetPath, args: a.args });
+        rows.push({ kind: "app", name: a.name, detail: "应用", path: a.targetPath, args: a.args });
         if (rows.length >= MAX_RESULTS) return rows;
       }
     }
@@ -125,7 +125,7 @@ export function SearchOverlay({ edge }: { edge: DockEdge }) {
 
   const launch = useCallback(
     (row: ResultRow) => {
-      ipc.launch(row.path, row.args).catch(notify.on(`Could not open ${row.name}`));
+      ipc.launch(row.path, row.args).catch(notify.on(`无法打开 ${row.name}`));
       setOpen(false);
     },
     [setOpen],
@@ -189,7 +189,7 @@ export function SearchOverlay({ edge }: { edge: DockEdge }) {
           <input
             ref={inputRef}
             className="search-input"
-            placeholder="Search apps and recent files…"
+            placeholder="搜索应用和最近使用的文件…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={onKeyDown}
@@ -200,14 +200,14 @@ export function SearchOverlay({ edge }: { edge: DockEdge }) {
               <div className="search-empty" data-tone={failed ? "error" : undefined}>
                 {loading ? (
                   <>
-                    <span className="flyout-spinner" aria-hidden /> Looking through your apps…
+                    <span className="flyout-spinner" aria-hidden /> 正在搜索应用…
                   </>
                 ) : failed ? (
-                  "Could not read your installed apps"
+                  "无法读取已安装的应用"
                 ) : query ? (
-                  `No matches for "${query}"`
+                  `没有找到与“${query}”匹配的结果`
                 ) : (
-                  "Start typing to find an app"
+                  "输入应用名称开始搜索"
                 )}
               </div>
             )}

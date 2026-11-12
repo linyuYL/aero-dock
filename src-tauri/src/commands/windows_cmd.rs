@@ -2,6 +2,7 @@
 //! `apps://running-changed` event; these commands cover hydrate + actions.
 
 use crate::platform::windows::running;
+use crate::core::{AeroError, AeroResult};
 
 #[tauri::command]
 pub fn get_running() -> running::RunningSnapshot {
@@ -9,13 +10,22 @@ pub fn get_running() -> running::RunningSnapshot {
 }
 
 #[tauri::command]
-pub fn activate_window(hwnd: isize) {
-    running::activate_window(hwnd);
+pub fn activate_window(hwnd: isize) -> AeroResult<()> {
+    running::activate_window(hwnd)
 }
 
 #[tauri::command]
-pub fn minimize_window(hwnd: isize) {
-    running::minimize_window(hwnd);
+pub async fn toggle_window(hwnd: isize) -> AeroResult<()> {
+    tauri::async_runtime::spawn_blocking(move || running::toggle_window(hwnd))
+        .await
+        .map_err(|e| AeroError::other(format!("无法切换窗口：{e}")))?
+}
+
+#[tauri::command]
+pub async fn minimize_window(hwnd: isize) -> AeroResult<()> {
+    tauri::async_runtime::spawn_blocking(move || running::minimize_window(hwnd))
+        .await
+        .map_err(|e| AeroError::other(format!("无法最小化窗口：{e}")))?
 }
 
 #[tauri::command]

@@ -4,20 +4,20 @@ use serde::Serialize;
 /// message string so the frontend can surface it without knowing variants.
 #[derive(Debug, thiserror::Error)]
 pub enum AeroError {
-    #[error("io error: {0}")]
+    #[error("文件读写错误：{0}")]
     Io(#[from] std::io::Error),
 
-    #[error("serialization error: {0}")]
+    #[error("数据格式错误：{0}")]
     Serde(#[from] serde_json::Error),
 
-    #[error("tauri error: {0}")]
+    #[error("应用运行错误：{0}")]
     Tauri(#[from] tauri::Error),
 
     #[cfg(windows)]
-    #[error("windows api error: {0}")]
+    #[error("Windows API 错误：{0}")]
     Windows(#[from] windows::core::Error),
 
-    #[error("image error: {0}")]
+    #[error("图像处理错误：{0}")]
     Image(#[from] image::ImageError),
 
     #[error("{0}")]

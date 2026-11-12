@@ -87,7 +87,7 @@ pub async fn open_widget_layer(app: AppHandle) -> AeroResult<()> {
         WIDGETS_LABEL,
         tauri::WebviewUrl::App("index.html?window=widgets".into()),
     )
-    .title("Aero Widgets")
+    .title("Aero 桌面小组件")
     .decorations(false)
     .transparent(true)
     .resizable(false)

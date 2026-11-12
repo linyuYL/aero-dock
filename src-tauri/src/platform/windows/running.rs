@@ -2,14 +2,14 @@
 //! a hidden window on its own thread registers for shell hook messages
 //! (HSHELL_WINDOWCREATED / DESTROYED / ACTIVATED …) and keeps a snapshot
 //! of alt-tab-eligible windows. Every change is pushed to the frontend
-//! as a full `apps://running-changed` snapshot — no polling anywhere.
+//! as a full `apps://running-changed` snapshot.
 
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
 use parking_lot::Mutex;
 use serde::Serialize;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use windows::core::w;
 use windows::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
 use windows::Win32::Graphics::Dwm::{DwmGetWindowAttribute, DWMWA_CLOAKED};
@@ -17,13 +17,18 @@ use windows::Win32::System::Threading::{
     OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_WIN32,
     PROCESS_QUERY_LIMITED_INFORMATION,
 };
+use windows::Win32::UI::Accessibility::{SetWinEventHook, UnhookWinEvent, HWINEVENTHOOK};
 use windows::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DispatchMessageW, EnumWindows, GetClassNameW, GetMessageW,
-    GetWindow, GetWindowLongPtrW, GetWindowTextLengthW, GetWindowTextW, GetWindowThreadProcessId,
-    IsWindow, IsWindowVisible, RegisterClassW, RegisterShellHookWindow, RegisterWindowMessageW,
-    TranslateMessage, GWL_EXSTYLE, GW_OWNER, MSG, WINDOW_EX_STYLE, WINDOW_STYLE,
-    WNDCLASSW, WS_EX_TOOLWINDOW,
+    CreateWindowExW, DefWindowProcW, DispatchMessageW, EnumWindows, GetClassNameW,
+    GetForegroundWindow, GetMessageW, GetWindow, GetWindowLongPtrW, GetWindowTextLengthW,
+    GetWindowTextW, GetWindowThreadProcessId, IsWindow, IsWindowVisible, KillTimer, RegisterClassW,
+    RegisterShellHookWindow, RegisterWindowMessageW, SetTimer, TranslateMessage, EVENT_OBJECT_HIDE,
+    EVENT_OBJECT_SHOW, EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_SWITCHEND, EVENT_SYSTEM_SWITCHSTART,
+    GWL_EXSTYLE, GW_OWNER, MSG, OBJID_WINDOW, WINDOW_EX_STYLE, WINDOW_STYLE, WINEVENT_OUTOFCONTEXT,
+    WM_TIMER, WNDCLASSW, WS_EX_TOOLWINDOW,
 };
+
+use super::dock_window;
 
 pub const RUNNING_EVENT: &str = "apps://running-changed";
 
@@ -139,14 +144,77 @@ fn run_message_loop(app: AppHandle) {
         let _ = SHELL_MSG.set(RegisterWindowMessageW(w!("SHELLHOOK")));
         if !RegisterShellHookWindow(hwnd).as_bool() {
             log::error!("RegisterShellHookWindow failed; running apps won't be live");
-            return;
         }
+
+        // The Windows 11 task switcher can show without a foreground or switch event.
+        let hooks = [
+            (EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND),
+            (EVENT_SYSTEM_SWITCHSTART, EVENT_SYSTEM_SWITCHEND),
+            (EVENT_OBJECT_SHOW, EVENT_OBJECT_HIDE),
+        ]
+        .map(|(first, last)| {
+            SetWinEventHook(first, last, None, Some(visibility_event), 0, 0, WINEVENT_OUTOFCONTEXT)
+        });
+        if hooks.iter().any(|hook| hook.0.is_null()) {
+            log::error!("Could not register all dock visibility events");
+        }
+        // Explorer can move the desktop above the dock after the Win+D focus
+        // event has already arrived. Check the ordering while on the desktop.
+        let timer = SetTimer(Some(hwnd), 1, 50, None);
+        let mut foreground = GetForegroundWindow();
+        let dock = app
+            .get_webview_window("dock")
+            .and_then(|window| window.hwnd().ok())
+            .map(|hwnd| HWND(hwnd.0));
+        dock_window::refresh_visibility(&app);
 
         let mut msg = MSG::default();
         while GetMessageW(&mut msg, None, 0, 0).as_bool() {
+            if msg.message == WM_TIMER && msg.hwnd == hwnd && msg.wParam.0 == timer {
+                let current = GetForegroundWindow();
+                if current != foreground
+                    || dock.is_some_and(|dock| dock_window::needs_desktop_refresh(dock, current))
+                {
+                    foreground = current;
+                    dock_window::refresh_visibility(&app);
+                }
+                continue;
+            }
             let _ = TranslateMessage(&msg);
             DispatchMessageW(&msg);
         }
+        if timer != 0 {
+            let _ = KillTimer(Some(hwnd), timer);
+        }
+        for hook in hooks {
+            if !hook.0.is_null() {
+                let _ = UnhookWinEvent(hook);
+            }
+        }
+    }
+}
+
+unsafe extern "system" fn visibility_event(
+    _hook: HWINEVENTHOOK,
+    event: u32,
+    hwnd: HWND,
+    object: i32,
+    child: i32,
+    _thread: u32,
+    _time: u32,
+) {
+    match event {
+        EVENT_SYSTEM_SWITCHSTART => dock_window::set_switching_apps(true),
+        EVENT_SYSTEM_SWITCHEND => dock_window::set_switching_apps(false),
+        EVENT_OBJECT_SHOW | EVENT_OBJECT_HIDE
+            if object != OBJID_WINDOW.0 || child != 0 || !dock_window::is_task_switcher(hwnd) =>
+        {
+            return;
+        }
+        _ => {}
+    }
+    if let Some(app) = with_state(|s| s.app.clone()) {
+        dock_window::refresh_visibility(&app);
     }
 }
 
@@ -331,7 +399,7 @@ fn is_orphan_app_frame(exe_path: &str, aumid: Option<&str>) -> bool {
 }
 
 /// Read a window's class name.
-unsafe fn window_class(hwnd: HWND) -> String {
+pub(super) unsafe fn window_class(hwnd: HWND) -> String {
     unsafe {
         let mut buf = [0u16; 256];
         let n = GetClassNameW(hwnd, &mut buf);
@@ -382,12 +450,7 @@ unsafe fn probe_window(hwnd: HWND) -> Option<WindowInfo> {
 
         let mut pid: u32 = 0;
         GetWindowThreadProcessId(hwnd, Some(&mut pid));
-        // Our own windows are NOT excluded by pid. The dock itself is
-        // already filtered out above by WS_EX_TOOLWINDOW, and skipping the
-        // whole process would also hide the settings window, which is a
-        // normal window the user expects to see and switch back to from
-        // the dock like any other.
-        if pid == 0 {
+        if pid == 0 || pid == std::process::id() {
             return None;
         }
         let exe = process_path(pid)?;
@@ -466,39 +529,138 @@ fn process_path(pid: u32) -> Option<String> {
 // window actions
 // ---------------------------------------------------------------------
 
+pub fn toggle_window(hwnd: isize) -> crate::core::AeroResult<()> {
+    use windows::Win32::UI::WindowsAndMessaging::{GetAncestor, IsIconic, GA_ROOTOWNER};
+    unsafe {
+        let target = HWND(hwnd as *mut _);
+        let foreground = GetForegroundWindow();
+        if !IsIconic(target).as_bool()
+            && (foreground == target || GetAncestor(foreground, GA_ROOTOWNER) == target)
+        {
+            minimize_window(hwnd)
+        } else {
+            activate_window(hwnd)
+        }
+    }
+}
+
 /// Bring a window to the foreground, restoring it if minimized.
 /// Uses the Alt-key trick so it works from a NOACTIVATE dock window.
-pub fn activate_window(hwnd: isize) {
+pub fn activate_window(hwnd: isize) -> crate::core::AeroResult<()> {
     use windows::Win32::UI::Input::KeyboardAndMouse::{
         keybd_event, KEYBD_EVENT_FLAGS, KEYEVENTF_KEYUP, VK_MENU,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
-        IsIconic, SetForegroundWindow, ShowWindow, SW_RESTORE,
+        IsIconic, SetForegroundWindow, ShowWindow, SwitchToThisWindow, SW_RESTORE,
     };
     unsafe {
         let h = HWND(hwnd as *mut _);
         if !IsWindow(Some(h)).as_bool() {
-            return;
+            return Ok(());
         }
         if IsIconic(h).as_bool() {
             let _ = ShowWindow(h, SW_RESTORE);
+            if IsIconic(h).as_bool() {
+                // A normal restore can be refused for an elevated window.
+                SwitchToThisWindow(h, true);
+                return Ok(());
+            }
+        }
+        if GetForegroundWindow() == h || SetForegroundWindow(h).as_bool() {
+            return Ok(());
         }
         // Windows only lets the foreground process reassign foreground;
         // a synthetic Alt press makes the shell treat us as eligible.
         keybd_event(VK_MENU.0 as u8, 0, KEYBD_EVENT_FLAGS(0), 0);
-        let _ = SetForegroundWindow(h);
+        let activated = SetForegroundWindow(h).as_bool();
         keybd_event(VK_MENU.0 as u8, 0, KEYEVENTF_KEYUP, 0);
-    }
-}
-
-pub fn minimize_window(hwnd: isize) {
-    use windows::Win32::UI::WindowsAndMessaging::{ShowWindow, SW_MINIMIZE};
-    unsafe {
-        let h = HWND(hwnd as *mut _);
-        if IsWindow(Some(h)).as_bool() {
-            let _ = ShowWindow(h, SW_MINIMIZE);
+        if !activated {
+            return Err(crate::core::AeroError::other("Windows 拒绝切换到该窗口"));
         }
     }
+    Ok(())
+}
+
+pub fn minimize_window(hwnd: isize) -> crate::core::AeroResult<()> {
+    use windows::Win32::UI::WindowsAndMessaging::{IsIconic, ShowWindowAsync, SW_MINIMIZE};
+    unsafe {
+        let h = HWND(hwnd as *mut _);
+        if !IsWindow(Some(h)).as_bool() || IsIconic(h).as_bool() {
+            return Ok(());
+        }
+        if ShowWindowAsync(h, SW_MINIMIZE).as_bool() {
+            for _ in 0..3 {
+                std::thread::sleep(std::time::Duration::from_millis(30));
+                if IsIconic(h).as_bool() {
+                    return Ok(());
+                }
+            }
+        }
+    }
+    // Run UI Automation outside the WebView host when the window refuses
+    // the usual request. The helper runs with the dock's existing permissions.
+    let status = std::process::Command::new(std::env::current_exe()?)
+        .arg("--minimize-accessible-window")
+        .arg(hwnd.to_string())
+        .status()?;
+    if !status.success() {
+        return Err(crate::core::AeroError::other("Windows 未最小化该窗口"));
+    }
+    Ok(())
+}
+
+pub fn minimize_accessible_window(hwnd: isize) -> crate::core::AeroResult<()> {
+    use windows::core::Interface;
+    use windows::Win32::System::Com::{CoCreateInstance, CLSCTX_INPROC_SERVER};
+    use windows::Win32::System::Variant::VARIANT;
+    use windows::Win32::UI::Accessibility::{
+        AccessibleObjectFromWindow, CUIAutomation8, IAccessible, IUIAutomation2,
+        IUIAutomationWindowPattern, UIA_WindowPatternId, WindowVisualState_Minimized,
+    };
+    use windows::Win32::UI::WindowsAndMessaging::{IsIconic, OBJID_TITLEBAR, WS_MINIMIZEBOX, GWL_STYLE};
+    unsafe {
+        let h = HWND(hwnd as *mut _);
+        if !IsWindow(Some(h)).as_bool() || IsIconic(h).as_bool() {
+            return Ok(());
+        }
+        let _com = crate::platform::ComApartment::multithreaded();
+        if GetWindowLongPtrW(h, GWL_STYLE) & WS_MINIMIZEBOX.0 as isize != 0 {
+            let mut raw = std::ptr::null_mut();
+            if AccessibleObjectFromWindow(h, OBJID_TITLEBAR.0 as u32, &IAccessible::IID, &mut raw)
+                .is_ok() && !raw.is_null()
+            {
+                let title_bar = IAccessible::from_raw(raw);
+                // Child 2 is the minimize button of the standard Windows title bar.
+                if title_bar.accDoDefaultAction(&VARIANT::from(2i32)).is_ok() {
+                    for _ in 0..5 {
+                        if IsIconic(h).as_bool() {
+                            return Ok(());
+                        }
+                        std::thread::sleep(std::time::Duration::from_millis(10));
+                    }
+                }
+            }
+        }
+        let automation: IUIAutomation2 = CoCreateInstance(&CUIAutomation8, None, CLSCTX_INPROC_SERVER)?;
+        automation.SetConnectionTimeout(750)?;
+        automation.SetTransactionTimeout(750)?;
+        for _ in 0..2 {
+            let element = automation.ElementFromHandle(h)?;
+            let window: IUIAutomationWindowPattern =
+                element.GetCurrentPatternAs(UIA_WindowPatternId)?;
+            window.SetWindowVisualState(WindowVisualState_Minimized)?;
+            for _ in 0..5 {
+                if IsIconic(h).as_bool() {
+                    return Ok(());
+                }
+                std::thread::sleep(std::time::Duration::from_millis(50));
+            }
+        }
+        if !IsIconic(h).as_bool() {
+            return Err(crate::core::AeroError::other("Windows 未最小化该窗口"));
+        }
+    }
+    Ok(())
 }
 
 pub fn close_window(hwnd: isize) {

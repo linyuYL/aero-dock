@@ -21,8 +21,8 @@ pub const CURRENT_SCHEMA_VERSION: u32 = 2;
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum DockEdge {
-    Top,
     #[default]
+    Top,
     Bottom,
     Left,
     Right,
@@ -63,7 +63,7 @@ pub struct DockSettings {
 impl Default for DockSettings {
     fn default() -> Self {
         Self {
-            edge: DockEdge::Bottom,
+            edge: DockEdge::Top,
             monitor: None,
             icon_size: 48,
             magnification: true,
@@ -212,7 +212,7 @@ impl Default for DockMode {
     fn default() -> Self {
         Self {
             id: String::new(),
-            name: "Mode".into(),
+            name: "模式".into(),
             glyph: String::new(),
             pinned: Vec::new(),
             audio: Vec::new(),

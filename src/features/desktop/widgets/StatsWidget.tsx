@@ -17,9 +17,9 @@ function uptimeLabel(seconds: number): string {
   const d = Math.floor(seconds / 86400);
   const h = Math.floor((seconds % 86400) / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  if (d > 0) return `${d}d ${h}h`;
-  if (h > 0) return `${h}h ${m}m`;
-  return `${m}m`;
+  if (d > 0) return `${d} 天 ${h} 小时`;
+  if (h > 0) return `${h} 小时 ${m} 分钟`;
+  return `${m} 分钟`;
 }
 
 function Meter({ label, percent, detail }: { label: string; percent: number; detail: string }) {
@@ -62,18 +62,18 @@ export function StatsWidget(_: WidgetProps) {
   }, []);
 
   if (!load) {
-    return <div className="w-empty">Reading the machine…</div>;
+    return <div className="w-empty">正在读取系统状态…</div>;
   }
 
   const gb = (mb: number) => (mb / 1024).toFixed(1);
 
   return (
     <div className="w-stats">
-      <Meter label="Processor" percent={load.cpuPercent} detail="across all cores" />
+      <Meter label="处理器" percent={load.cpuPercent} detail="所有核心" />
       <Meter
-        label="Memory"
+        label="内存"
         percent={load.memoryPercent}
-        detail={`${gb(load.memoryUsedMb)} of ${gb(load.memoryTotalMb)} GB`}
+        detail={`已用 ${gb(load.memoryUsedMb)} GB，共 ${gb(load.memoryTotalMb)} GB`}
       />
       <div className="w-stat-uptime">Up {uptimeLabel(load.uptimeSeconds)}</div>
     </div>

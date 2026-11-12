@@ -4,24 +4,16 @@
  */
 
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { springs } from "../../engine/animation/springs";
 import { ipc } from "../../ipc/commands";
 import { notify } from "../feedback/toastStore";
-import type { AudioDevice, Settings } from "../../ipc/types";
-import { exeKey, useAppAudio } from "../../state/audioStore";
+import type { Settings } from "../../ipc/types";
 import type { DockItemView } from "../../state/dockStore";
 import { bloomOffset, flyoutStyle, useMenu } from "./menuStore";
 import "./contextmenu.css";
 
 const MENU_WIDTH = 240;
-
-/** The output an app is set to in the active mode, if any. */
-function chosenDevice(settings: Settings, exe: string): string | null {
-  const key = exeKey(exe);
-  const mode = settings.modes.modes.find((m) => m.id === settings.modes.activeId);
-  return mode?.audio.find((a) => a.exe === key)?.deviceId ?? null;
-}
 
 interface ContextMenuProps {
   settings: Settings;
@@ -49,7 +41,7 @@ async function stackWithPrevious(settings: Settings, itemId: string): Promise<un
       id: `pin-${crypto.randomUUID()}`,
       kind: "stack",
       path: "",
-      name: `${prev.name} & more`,
+      name: `${prev.name} 等`,
       icon: null,
       children: [prev, current],
     };
@@ -77,13 +69,13 @@ function buildActions(item: DockItemView, settings: Settings): Action[] {
 
   // stacks have their own compact menu
   if (item.kind === "stack") {
-    actions.push({ label: "Unstack", run: () => unstack(settings, item.id) });
+    actions.push({ label: "取消分组", run: () => unstack(settings, item.id) });
     actions.push({
-      label: "Unpin from Dock",
+      label: "从桌面坞取消固定",
       run: () => ipc.unpinItem(item.id),
     });
     actions.push({
-      label: "Dock settings…",
+      label: "桌面坞设置…",
       separatorAbove: true,
       run: () => ipc.openSettings(),
     });
@@ -91,21 +83,23 @@ function buildActions(item: DockItemView, settings: Settings): Action[] {
   }
 
   actions.push({
-    label: item.windows.length > 0 ? "New window" : "Open",
+    label: item.windows.length > 0 ? "新建窗口" : "打开",
     run: () => ipc.launch(item.target, item.args),
   });
-  actions.push({
-    label: "Run as administrator",
-    run: () => ipc.launchAsAdmin(item.target, item.args),
-  });
-  actions.push({
-    label: "Open file location",
-    run: () => ipc.openFileLocation(item.target),
-  });
+  if (!/^https?:\/\//i.test(item.target)) {
+    actions.push({
+      label: "以管理员身份运行",
+      run: () => ipc.launchAsAdmin(item.target, item.args),
+    });
+    actions.push({
+      label: "打开文件所在位置",
+      run: () => ipc.openFileLocation(item.target),
+    });
+  }
 
   if (item.pinned) {
     actions.push({
-      label: "Unpin from Dock",
+      label: "从桌面坞取消固定",
       separatorAbove: true,
       run: () => ipc.unpinItem(item.id),
     });
@@ -114,14 +108,14 @@ function buildActions(item: DockItemView, settings: Settings): Action[] {
       actions.push({
         label:
           settings.pinned[idx - 1].kind === "stack"
-            ? "Add to stack on the left"
-            : "Stack with previous item",
+            ? "添加到左侧分组"
+            : "与左侧项目分组",
         run: () => stackWithPrevious(settings, item.id),
       });
     }
   } else {
     actions.push({
-      label: "Pin to Dock",
+      label: "固定到桌面坞",
       separatorAbove: true,
       run: () =>
         ipc.pinItem(
@@ -139,25 +133,25 @@ function buildActions(item: DockItemView, settings: Settings): Action[] {
   }
 
   actions.push({
-    label: "Dock settings…",
+    label: "桌面坞设置…",
     separatorAbove: true,
     run: () => ipc.openSettings(),
   });
 
   if (item.windows.length === 1) {
     actions.push({
-      label: "Minimize",
+      label: "最小化",
       separatorAbove: true,
       run: () => ipc.minimizeWindow(item.windows[0].hwnd),
     });
     actions.push({
-      label: "Close window",
+      label: "关闭窗口",
       danger: true,
       run: () => ipc.closeWindow(item.windows[0].hwnd),
     });
   } else if (item.windows.length > 1) {
     actions.push({
-      label: `Close all (${item.windows.length})`,
+      label: `关闭全部（${item.windows.length}）`,
       danger: true,
       separatorAbove: true,
       run: () => Promise.all(item.windows.map((w) => ipc.closeWindow(w.hwnd))),
@@ -170,25 +164,6 @@ function buildActions(item: DockItemView, settings: Settings): Action[] {
 export function ContextMenu({ settings, edge }: ContextMenuProps) {
   const { kind, item: openItem, anchor, close } = useMenu();
   const item = kind === "menu" ? openItem : null;
-
-  const audio = useAppAudio((a) => (item ? a.levels[exeKey(item.audioExe)] : undefined));
-  const toggleMute = useAppAudio((a) => a.toggleMute);
-  const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [showDevices, setShowDevices] = useState(false);
-
-  // collapse the device list whenever the menu moves to another icon
-  useEffect(() => {
-    setShowDevices(false);
-  }, [item?.id]);
-
-  // endpoints are only listed once the user asks for them
-  useEffect(() => {
-    if (!showDevices || devices.length > 0) return;
-    ipc
-      .listAudioDevices()
-      .then(setDevices)
-      .catch((e) => console.warn("audio device list failed", e));
-  }, [showDevices, devices.length]);
 
   // close on any click outside / Escape
   useEffect(() => {
@@ -240,80 +215,13 @@ export function ContextMenu({ settings, edge }: ContextMenuProps) {
                   key={w.hwnd}
                   className="aero-menu-item aero-menu-window"
                   onClick={() => {
-                    ipc.activateWindow(w.hwnd).catch(notify.on("Could not focus that window"));
+                    ipc.activateWindow(w.hwnd).catch(notify.on("无法激活该窗口"));
                     close();
                   }}
                 >
                   <span className="aero-menu-window-title">{w.title}</span>
                 </button>
               ))}
-              <div className="aero-menu-separator" />
-            </div>
-          )}
-          {item.kind !== "stack" && (
-            <div className="aero-menu-audio">
-              {audio && (
-                <button
-                  className="aero-menu-item"
-                  onClick={() => {
-                    void toggleMute(item.audioExe);
-                    close();
-                  }}
-                >
-                  {audio.muted ? "Unmute" : "Mute"}
-                  <span className="aero-menu-hint">
-                    {audio.muted ? "muted" : `${audio.volume}%`}
-                  </span>
-                </button>
-              )}
-              <button
-                className="aero-menu-item"
-                aria-expanded={showDevices}
-                onClick={() => setShowDevices((v) => !v)}
-              >
-                Audio output
-                <span className="aero-menu-hint">{showDevices ? "hide" : "choose"}</span>
-              </button>
-              {showDevices && (
-                <div className="aero-menu-devices">
-                  {devices.length === 0 && (
-                    <div className="aero-menu-note">Looking for outputs…</div>
-                  )}
-                  {devices.map((d) => {
-                    const current = chosenDevice(settings, item.audioExe);
-                    const active = current === null ? d.isDefault : current === d.id;
-                    return (
-                      <button
-                        key={d.id}
-                        className="aero-menu-item aero-menu-device"
-                        data-active={active}
-                        onClick={() => {
-                          ipc
-                            .setAppOutputDevice(item.audioExe, d.id, true)
-                            .then((choice) => {
-                              if (choice.openedSettings) {
-                                notify.info(
-                                  `Saved. Pick ${d.name} for ${item.name} in the Windows page that just opened.`,
-                                );
-                              } else {
-                                notify.info(`Saved ${d.name} for ${item.name}.`);
-                              }
-                            })
-                            .catch(notify.on("Could not set the audio output"));
-                          close();
-                        }}
-                      >
-                        <span className="aero-menu-device-name">{d.name}</span>
-                        {d.isDefault && <span className="aero-menu-hint">system</span>}
-                      </button>
-                    );
-                  })}
-                  <div className="aero-menu-note">
-                    Windows performs the routing itself, so the last step happens
-                    on its own settings page.
-                  </div>
-                </div>
-              )}
               <div className="aero-menu-separator" />
             </div>
           )}
@@ -325,7 +233,7 @@ export function ContextMenu({ settings, edge }: ContextMenuProps) {
                 data-danger={action.danger}
                 onClick={() => {
                   Promise.resolve(action.run()).catch(
-                    notify.on(`"${action.label}" failed`),
+                    notify.on(`“${action.label}”执行失败`),
                   );
                   close();
                 }}

@@ -4,31 +4,53 @@
 //! inside the target monitor's work area.
 
 use parking_lot::Mutex;
-use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize};
+use tauri::{AppHandle, Manager};
+use windows::Win32::Foundation::{HWND, RECT};
+use windows::Win32::Graphics::Gdi::{
+    CreateRectRgnIndirect, DeleteObject, GetWindowRgnBox, SetWindowRgn, HGDIOBJ, SIMPLEREGION,
+};
+use windows::Win32::UI::WindowsAndMessaging::{
+    GetWindowRect, SetWindowPos, SWP_NOACTIVATE, SWP_NOZORDER,
+};
 
 use crate::core::settings::{DockEdge, SettingsStore};
 use crate::core::{AeroError, AeroResult};
 use crate::platform::windows::monitors::{enumerate_monitors, pick_monitor, MonitorInfoEx};
 
-/// Last content size requested by the frontend, in logical pixels.
+/// Last window and interactive region sizes, in logical pixels.
 pub struct DockGeometry {
-    content_size: Mutex<(f64, f64)>,
+    size: Mutex<DockSize>,
+}
+
+#[derive(Clone, Copy)]
+struct DockSize {
+    window: (f64, f64),
+    visible: (f64, f64),
 }
 
 impl Default for DockGeometry {
     fn default() -> Self {
         Self {
             // sensible pre-first-measure footprint
-            content_size: Mutex::new((720.0, 160.0)),
+            size: Mutex::new(DockSize { window: (720.0, 160.0), visible: (720.0, 160.0) }),
         }
     }
 }
 
 /// Frontend reports its content size; window is resized and repositioned.
 #[tauri::command]
-pub fn resize_dock(app: AppHandle, width: f64, height: f64) -> AeroResult<()> {
+pub fn resize_dock(
+    app: AppHandle,
+    width: f64,
+    height: f64,
+    visible_width: f64,
+    visible_height: f64,
+) -> AeroResult<()> {
     let geometry = app.state::<DockGeometry>();
-    *geometry.content_size.lock() = (width.max(1.0), height.max(1.0));
+    *geometry.size.lock() = DockSize {
+        window: (width, height),
+        visible: (visible_width, visible_height),
+    };
     position_dock(&app)
 }
 
@@ -37,7 +59,7 @@ pub fn resize_dock(app: AppHandle, width: f64, height: f64) -> AeroResult<()> {
 pub fn position_dock(app: &AppHandle) -> AeroResult<()> {
     let settings = app.state::<SettingsStore>().get();
     let geometry = app.state::<DockGeometry>();
-    let (logical_w, logical_h) = *geometry.content_size.lock();
+    let size = *geometry.size.lock();
 
     let monitors = enumerate_monitors()?;
     let monitor = pick_monitor(&monitors, settings.dock.monitor.as_deref());
@@ -49,15 +71,56 @@ pub fn position_dock(app: &AppHandle) -> AeroResult<()> {
         0
     };
 
-    let w = (logical_w * scale).round() as i32;
-    let h = (logical_h * scale).round() as i32;
-    let (x, y) = place_on_edge(monitor, settings.dock.edge, w, h, margin);
+    let pixels = |value: f64| ((value * scale).round() as i32).max(1);
+    let (w, h) = (pixels(size.window.0), pixels(size.window.1));
+    let vw = pixels(size.visible.0).min(w);
+    let vh = pixels(size.visible.1).min(h);
+    let edge = settings.dock.edge;
+    let (x, y) = place_on_edge(monitor, edge, w, h, margin);
+    let (left, top) = match edge {
+        DockEdge::Bottom => ((w - vw) / 2, h - vh),
+        DockEdge::Top => ((w - vw) / 2, 0),
+        DockEdge::Left => (0, (h - vh) / 2),
+        DockEdge::Right => (w - vw, (h - vh) / 2),
+    };
+    let bounds = RECT { left: x, top: y, right: x + w, bottom: y + h };
+    let visible = RECT { left, top, right: left + vw, bottom: top + vh };
 
     let window = app
         .get_webview_window("dock")
         .ok_or_else(|| AeroError::other("dock window missing"))?;
-    window.set_size(PhysicalSize::new(w.max(1) as u32, h.max(1) as u32))?;
-    window.set_position(PhysicalPosition::new(x, y))?;
+    let hwnd = window.hwnd()?.0 as isize;
+    app.run_on_main_thread(move || {
+        if let Err(error) = apply_dock_bounds(HWND(hwnd as *mut _), bounds, visible) {
+            log::warn!("could not apply dock bounds: {error}");
+        }
+    })?;
+    Ok(())
+}
+
+fn apply_dock_bounds(hwnd: HWND, bounds: RECT, visible: RECT) -> AeroResult<()> {
+    unsafe {
+        let mut current = RECT::default();
+        GetWindowRect(hwnd, &mut current)?;
+        if current != bounds {
+            SetWindowPos(
+                hwnd, None, bounds.left, bounds.top,
+                bounds.right - bounds.left, bounds.bottom - bounds.top,
+                SWP_NOACTIVATE | SWP_NOZORDER,
+            )?;
+        }
+        // Clip the unused preview space out of both drawing and hit testing.
+        if GetWindowRgnBox(hwnd, &mut current) != SIMPLEREGION || current != visible {
+            let region = CreateRectRgnIndirect(&visible);
+            if region.0.is_null() {
+                return Err(AeroError::other("could not allocate dock region"));
+            }
+            if SetWindowRgn(hwnd, Some(region), true) == 0 {
+                let _ = DeleteObject(HGDIOBJ(region.0));
+                return Err(AeroError::other("could not apply dock region"));
+            }
+        }
+    }
     Ok(())
 }
 

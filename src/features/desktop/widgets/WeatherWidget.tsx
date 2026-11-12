@@ -27,16 +27,16 @@ interface Reading {
 
 /** The WMO codes Open-Meteo returns, grouped into what to draw. */
 function describe(code: number): { label: string; icon: Icon } {
-  if (code === 0) return { label: "Clear", icon: "sun" };
-  if (code <= 2) return { label: "Partly cloudy", icon: "partly" };
-  if (code === 3) return { label: "Overcast", icon: "cloud" };
-  if (code <= 48) return { label: "Fog", icon: "cloud" };
-  if (code <= 57) return { label: "Drizzle", icon: "rain" };
-  if (code <= 67) return { label: "Rain", icon: "rain" };
-  if (code <= 77) return { label: "Snow", icon: "snow" };
-  if (code <= 82) return { label: "Showers", icon: "rain" };
-  if (code <= 86) return { label: "Snow showers", icon: "snow" };
-  return { label: "Thunderstorm", icon: "storm" };
+  if (code === 0) return { label: "晴", icon: "sun" };
+  if (code <= 2) return { label: "晴间多云", icon: "partly" };
+  if (code === 3) return { label: "阴", icon: "cloud" };
+  if (code <= 48) return { label: "雾", icon: "cloud" };
+  if (code <= 57) return { label: "毛毛雨", icon: "rain" };
+  if (code <= 67) return { label: "雨", icon: "rain" };
+  if (code <= 77) return { label: "雪", icon: "snow" };
+  if (code <= 82) return { label: "阵雨", icon: "rain" };
+  if (code <= 86) return { label: "阵雪", icon: "snow" };
+  return { label: "雷暴", icon: "storm" };
 }
 
 type Icon = "sun" | "partly" | "cloud" | "rain" | "snow" | "storm";
@@ -112,7 +112,7 @@ export function WeatherWidget({ widget, allowNetwork }: WidgetProps) {
         };
       };
       const c = json.current;
-      if (!c || c.temperature_2m === undefined) throw new Error("no reading");
+      if (!c || c.temperature_2m === undefined) throw new Error("无数据");
       setReading({
         temperature: Math.round(c.temperature_2m),
         code: c.weather_code ?? 0,
@@ -135,22 +135,22 @@ export function WeatherWidget({ widget, allowNetwork }: WidgetProps) {
   if (!located) {
     return (
       <div className="w-empty">
-        Set a location for this widget in Settings, then Widgets.
+        请在「设置 → 桌面小组件」中设置地点。
       </div>
     );
   }
   if (!allowNetwork) {
     return (
       <div className="w-empty">
-        Weather is offline. Allow it in Settings, then Widgets.
+        天气小组件处于离线状态，请在「设置 → 桌面小组件」中允许联网。
       </div>
     );
   }
   if (failed && !reading) {
-    return <div className="w-empty">Could not reach the weather service.</div>;
+    return <div className="w-empty">无法连接天气服务。</div>;
   }
   if (!reading) {
-    return <div className="w-empty">Checking the sky…</div>;
+    return <div className="w-empty">正在查询天气…</div>;
   }
 
   const { label, icon } = describe(reading.code);
@@ -164,7 +164,7 @@ export function WeatherWidget({ widget, allowNetwork }: WidgetProps) {
           <span className="w-weather-unit">{celsius ? "°C" : "°F"}</span>
         </div>
         <div className="w-weather-label">{label}</div>
-        <div className="w-weather-place">{place || "Your location"}</div>
+        <div className="w-weather-place">{place || "你的位置"}</div>
       </div>
     </div>
   );

@@ -5,8 +5,6 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { ipc } from "../../ipc/commands";
-import { KOFI_URL } from "../../links";
 import type { DockEdge } from "../../ipc/types";
 import { bloomOffset, edgePanelStyle } from "../dock/menuStore";
 import { springs } from "../../engine/animation/springs";
@@ -20,7 +18,7 @@ export function Welcome({ edge }: { edge: DockEdge }) {
   const run = (action: () => Promise<void>) => {
     setBusy(true);
     action().catch((e) => {
-      notify.error("Setup failed — you can still drag apps onto the dock", e);
+      notify.error("初始化失败，仍可将应用拖到桌面坞。", e);
       setBusy(false);
     });
     // success needs no cleanup: the settings event flips
@@ -40,32 +38,18 @@ export function Welcome({ edge }: { edge: DockEdge }) {
       exit={{ opacity: 0, scale: 0.94, filter: "blur(6px)", transition: { duration: 0.2 } }}
       transition={{ ...springs.bloom, delay: 0.25 }}
     >
-      <span className="welcome-orb" aria-hidden />
-      <h1>Welcome to Aero Dock</h1>
-      <p>Glass, water, and light for your desktop. Let's set up your dock.</p>
+      <h1>欢迎使用 Aero Dock</h1>
+      <p>选择如何添加应用，开始使用桌面坞。</p>
       <div className="welcome-actions">
         <button className="welcome-primary" disabled={busy} onClick={() => run(importStarterApps)}>
-          {busy ? "Importing…" : "Import my apps"}
+          {busy ? "正在导入…" : "导入常用应用"}
         </button>
         <button className="welcome-secondary" disabled={busy} onClick={() => run(startEmpty)}>
-          Start empty
+          从空白开始
         </button>
       </div>
       <p className="welcome-hint">
-        Tip: drop any app or folder from Explorer onto the dock to pin it.
-      </p>
-      <p className="welcome-support">
-        Free and independently developed.{" "}
-        <button
-          className="welcome-support-link"
-          onClick={() =>
-            ipc
-              .launch(KOFI_URL)
-              .catch((e) => notify.error("Could not open the browser", e))
-          }
-        >
-          Support on Ko-fi ☕
-        </button>
+        提示：将应用或文件夹从资源管理器拖到桌面坞即可固定。
       </p>
     </motion.div>
   );

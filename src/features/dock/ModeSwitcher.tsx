@@ -45,15 +45,15 @@ function describe(report: {
 }): string {
   const bits: string[] = [];
   if (report.windowsMoved > 0) {
-    bits.push(`${report.windowsMoved} window${report.windowsMoved === 1 ? "" : "s"} placed`);
+    bits.push(`已摆放 ${report.windowsMoved} 个窗口`);
   }
   if (report.appsLaunched > 0) {
-    bits.push(`${report.appsLaunched} app${report.appsLaunched === 1 ? "" : "s"} opened`);
+    bits.push(`已打开 ${report.appsLaunched} 个应用`);
   }
   if (report.audioApplied > 0) {
-    bits.push("volumes set");
+    bits.push("已设置音量");
   }
-  return bits.length > 0 ? `${report.modeName}: ${bits.join(", ")}` : report.modeName;
+  return bits.length > 0 ? `${report.modeName}：${bits.join("，")}` : report.modeName;
 }
 
 export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: DockEdge }) {
@@ -90,7 +90,7 @@ export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: Doc
     ipc
       .switchMode(id)
       .then((report) => notify.info(describe(report)))
-      .catch(notify.on("Could not switch mode"))
+      .catch(notify.on("无法切换模式"))
       .finally(() => setBusy(false));
   };
 
@@ -100,9 +100,9 @@ export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: Doc
         ref={ref}
         className="mode-tile"
         data-busy={busy}
-        aria-label={`Mode: ${active?.name ?? "none"}`}
+        aria-label={`模式：${active?.name ?? "无"}`}
         aria-expanded={open}
-        title={active ? `Mode: ${active.name}` : "Modes"}
+        title={active ? `模式：${active.name}` : "模式"}
         onClick={() => {
           const el = ref.current;
           setOpen(!open, el ? anchorFor(el) : null);
@@ -126,7 +126,7 @@ export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: Doc
             exit={{ opacity: 0, scale: 0.94, filter: "blur(6px)", transition: { duration: 0.16 } }}
             transition={springs.bloom}
           >
-            <div className="mode-flyout-title">Modes</div>
+            <div className="mode-flyout-title">模式</div>
             {settings.modes.modes.map((mode) => (
               <button
                 key={mode.id}
@@ -145,7 +145,7 @@ export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: Doc
                   <span className="mode-row-meta">
                     {mode.pinned.length} pinned
                     {mode.workspace.windows.length > 0 &&
-                      ` · ${mode.workspace.windows.length} windows`}
+                      `· ${mode.workspace.windows.length} 个窗口`}
                   </span>
                 </span>
               </button>
@@ -156,21 +156,21 @@ export function ModeSwitcher({ settings, edge }: { settings: Settings; edge: Doc
               onClick={() => {
                 ipc
                   .captureWorkspace()
-                  .then(() => notify.info(`Saved this desktop to ${active?.name ?? "the mode"}`))
-                  .catch(notify.on("Could not save the workspace"));
+                  .then(() => notify.info(`已将当前窗口布局保存到${active?.name ?? "此模式"}`))
+                  .catch(notify.on("无法保存工作区"));
                 setOpen(false);
               }}
             >
-              Save windows to this mode
+              将窗口保存到此模式
             </button>
             <button
               className="mode-row mode-row-plain"
               onClick={() => {
-                ipc.openSettings().catch(notify.on("Could not open settings"));
+                ipc.openSettings().catch(notify.on("无法打开设置"));
                 setOpen(false);
               }}
             >
-              Manage modes…
+              管理模式…
             </button>
           </motion.div>
         )}

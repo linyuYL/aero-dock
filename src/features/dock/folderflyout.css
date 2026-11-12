@@ -2,10 +2,6 @@
 
 .folder-flyout {
   padding: 10px;
-  --glass-tint-top: rgba(120, 185, 235, 0.6);
-  --glass-tint-mid: rgba(35, 95, 155, 0.55);
-  --glass-tint-bottom: rgba(18, 60, 110, 0.66);
-  --glass-radius: 16px;
   transform-origin: bottom center;
 }
 
@@ -22,7 +18,6 @@
   font-size: 13.5px;
   font-weight: 700;
   color: #f2faff;
-  text-shadow: 0 1px 3px rgba(8, 40, 70, 0.7);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -32,18 +27,16 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 8px;
   padding: 3px 9px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), rgba(160, 220, 255, 0.12));
+  background: #ffffff18;
   color: #f2faff;
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
   cursor: pointer;
-  text-shadow: 0 1px 2px rgba(8, 40, 70, 0.6);
 }
 
 .folder-flyout-open:hover {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(160, 220, 255, 0.25));
-  box-shadow: 0 0 10px rgba(140, 210, 255, 0.4);
+  background: #ffffff18;
 }
 
 .folder-flyout-grid {
@@ -77,14 +70,8 @@
 }
 
 .folder-flyout-item:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.32),
-    rgba(160, 220, 255, 0.14) 55%,
-    rgba(120, 195, 245, 0.24)
-  );
+  background: #ffffff18;
   border-color: rgba(255, 255, 255, 0.4);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45), 0 0 10px rgba(140, 210, 255, 0.3);
 }
 
 .folder-flyout-item img,
@@ -104,7 +91,6 @@
   font-size: 10.5px;
   font-weight: 500;
   color: #eef8ff;
-  text-shadow: 0 1px 2px rgba(8, 40, 70, 0.7);
 }
 
 .folder-flyout-empty {

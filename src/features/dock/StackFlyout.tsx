@@ -85,7 +85,7 @@ export function StackFlyout({ edge }: StackFlyoutProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ ...springs.bloom, delay: Math.min(i * 0.025, 0.3) }}
                 onClick={() => {
-                  ipc.launch(child.path).catch(notify.on(`Could not open ${child.name}`));
+                  ipc.launch(child.path).catch(notify.on(`无法打开 ${child.name}`));
                   close();
                 }}
                 title={child.name}

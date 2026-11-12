@@ -39,7 +39,7 @@ export function CalendarWidget(_: WidgetProps) {
     for (let i = 0; i < 7; i += 1) {
       // any Sunday works as a reference for naming the days
       const ref = new Date(2024, 8, 1 + ((start + i) % 7));
-      names.push(ref.toLocaleDateString(undefined, { weekday: "narrow" }));
+      names.push(ref.toLocaleDateString("zh-CN", { weekday: "narrow" }));
     }
 
     const firstOfMonth = new Date(year, month, 1);
@@ -53,7 +53,7 @@ export function CalendarWidget(_: WidgetProps) {
     return {
       weekdays: names,
       cells: list,
-      monthLabel: today.toLocaleDateString(undefined, { month: "long", year: "numeric" }),
+      monthLabel: today.toLocaleDateString("zh-CN", { month: "long", year: "numeric" }),
     };
   }, [today]);
 

@@ -51,7 +51,7 @@ pub async fn resolve_icons(
     app: AppHandle,
     targets: Vec<String>,
 ) -> AeroResult<HashMap<String, String>> {
-    let cache_dir = crate::core::paths::data_dir(&app)?.join("icons");
+    let cache_dir = crate::core::paths::icon_cache_dir(&app)?;
     tauri::async_runtime::spawn_blocking(move || {
         let mut out = HashMap::with_capacity(targets.len());
         for target in targets {
@@ -66,6 +66,53 @@ pub async fn resolve_icons(
     })
     .await
     .map_err(|e| AeroError::other(format!("icon task failed: {e}")))
+}
+
+#[tauri::command]
+pub async fn pick_pin_path(
+    window: tauri::WebviewWindow,
+    folder: bool,
+    icon: Option<bool>,
+) -> AeroResult<Option<String>> {
+    use windows::core::{w, HRESULT};
+    use windows::Win32::Foundation::HWND;
+    use windows::Win32::System::Com::{CoCreateInstance, CoTaskMemFree, CLSCTX_INPROC_SERVER};
+    use windows::Win32::UI::Shell::Common::COMDLG_FILTERSPEC;
+    use windows::Win32::UI::Shell::{
+        FileOpenDialog, IFileOpenDialog, FOS_FORCEFILESYSTEM, FOS_NOCHANGEDIR,
+        FOS_NODEREFERENCELINKS, FOS_PICKFOLDERS, SIGDN_FILESYSPATH,
+    };
+
+    let owner = window.hwnd()?.0 as isize;
+    tauri::async_runtime::spawn_blocking(move || {
+        let _com = crate::platform::ComApartment::new();
+        unsafe {
+            let dialog: IFileOpenDialog = CoCreateInstance(&FileOpenDialog, None, CLSCTX_INPROC_SERVER)?;
+            if icon == Some(true) {
+                dialog.SetTitle(w!("选择项目图标"))?;
+                dialog.SetFileTypes(&[COMDLG_FILTERSPEC {
+                    pszName: w!("图标和图片（ICO、PNG、JPG、BMP）"),
+                    pszSpec: w!("*.ico;*.png;*.jpg;*.jpeg;*.bmp"),
+                }])?;
+            }
+            let mut options = dialog.GetOptions()? | FOS_FORCEFILESYSTEM | FOS_NOCHANGEDIR;
+            options |= if folder { FOS_PICKFOLDERS } else { FOS_NODEREFERENCELINKS };
+            dialog.SetOptions(options)?;
+            match dialog.Show(Some(HWND(owner as *mut _))) {
+                Ok(()) => {}
+                Err(err) if err.code() == HRESULT(0x800704C7u32 as i32) => return Ok(None),
+                Err(err) => return Err(err.into()),
+            }
+            let raw = dialog.GetResult()?.GetDisplayName(SIGDN_FILESYSPATH)?;
+            let result = raw.to_string();
+            CoTaskMemFree(Some(raw.as_ptr().cast()));
+            result
+                .map(Some)
+                .map_err(|_| AeroError::other("无法读取所选路径。"))
+        }
+    })
+    .await
+    .map_err(|e| AeroError::other(format!("无法打开文件选择器：{e}")))?
 }
 
 /// Launch an app (or open a file/folder) through the shell, detached from

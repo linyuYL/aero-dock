@@ -32,6 +32,10 @@ export interface DockItemView {
   audioExe: string;
 }
 
+export function customIconKey(item: PinnedItem) {
+  return item.icon?.startsWith("custom-icon:") ? item.icon : undefined;
+}
+
 interface IconState {
   /** target path -> asset:// URL of the cached PNG */
   iconUrls: Record<string, string>;
@@ -89,14 +93,20 @@ export function buildDockItems(
 
   const items: DockItemView[] = pinned.map((p) => {
     const windows = p.path ? (byExe.get(targetKey(p.path)) ?? []) : [];
+    const custom = customIconKey(p);
     return {
       id: p.id,
       name: p.name,
       target: p.path,
       kind: p.kind,
-      iconSrc: p.path ? (iconUrls[p.path] ?? null) : null,
+      iconSrc: (custom && iconUrls[custom])
+        || (p.kind !== "stack" && p.path ? iconUrls[p.path] : undefined)
+        || null,
       children: p.children,
-      childIcons: p.children.map((c) => (c.path ? (iconUrls[c.path] ?? null) : null)),
+      childIcons: p.children.map((c) => {
+        const key = customIconKey(c);
+        return (key && iconUrls[key]) || iconUrls[c.path] || null;
+      }),
       pinned: true,
       windows,
       focused: windows.some((w) => w.hwnd === focused),

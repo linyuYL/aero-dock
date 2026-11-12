@@ -30,9 +30,9 @@ function WidgetRow({
 }) {
   const [open, setOpen] = useState(false);
   const def = WIDGETS.find((w) => w.kind === widget.kind);
-  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}: ${e}`);
+  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}：${e}`);
   const style = (patch: Parameters<typeof ipc.styleWidget>[1]) =>
-    ipc.styleWidget(widget.id, patch).catch(fail("Could not change the widget"));
+    ipc.styleWidget(widget.id, patch).catch(fail("无法更改小组件"));
 
   const opts = widget.options;
 
@@ -44,28 +44,28 @@ function WidgetRow({
           <strong>{def?.label ?? widget.kind}</strong>
           <span className="mode-card-meta">
             {Math.round(widget.width)} × {Math.round(widget.height)} ·{" "}
-            {widget.surface === "liquid" ? "Liquid" : "Classic"}
-            {widget.locked && " · locked"}
+            {widget.surface === "liquid" ? "液态玻璃" : "经典玻璃"}
+            {widget.locked && "· 已锁定"}
           </span>
         </div>
         <button className="aero-button" onClick={() => setOpen((v) => !v)}>
-          {open ? "Done" : "Edit"}
+          {open ? "完成" : "编辑"}
         </button>
       </div>
 
       {open && (
         <div className="mode-card-edit">
           <AeroSegmented<SurfaceStyle>
-            label="Material"
+            label="材质"
             value={widget.surface}
             options={[
-              { value: "aero", label: "Classic" },
-              { value: "liquid", label: "Liquid" },
+              { value: "aero", label: "经典玻璃" },
+              { value: "liquid", label: "液态玻璃" },
             ]}
             onChange={(v) => void style({ surface: v })}
           />
           <AeroSlider
-            label="Opacity"
+            label="不透明度"
             value={widget.opacity}
             min={0.3}
             max={1}
@@ -74,28 +74,28 @@ function WidgetRow({
             onChange={(v) => void style({ opacity: v })}
           />
           <div className="ctl-row">
-            <span className="ctl-label">Tint</span>
+            <span className="ctl-label">色调</span>
             <div className="ctl-actions">
               <input
                 type="color"
                 className="ctl-colour"
-                aria-label="Widget tint"
+                aria-label="小组件色调"
                 value={widget.accent ?? DEFAULT_ACCENT}
                 onChange={(e) => void style({ accent: e.target.value })}
               />
               <button className="aero-button" onClick={() => void style({ accent: null })}>
-                Use theme
+                使用主题色
               </button>
             </div>
           </div>
           <AeroToggle
-            label="Ambient bubbles"
+            label="气泡效果"
             checked={widget.ambient}
-            hint="Also what the Liquid material refracts, since the desktop behind cannot be sampled"
+            hint="液态玻璃会折射这些气泡，因为它无法直接采样后方桌面。"
             onChange={(v) => void style({ ambient: v })}
           />
           <AeroToggle
-            label="Lock in place"
+            label="锁定位置"
             checked={widget.locked}
             onChange={(v) => void style({ locked: v })}
           />
@@ -103,21 +103,21 @@ function WidgetRow({
           {widget.kind === "clock" && (
             <>
               <AeroSegmented<string>
-                label="Face"
+                label="表盘"
                 value={opts.analog ? "analog" : "digital"}
                 options={[
-                  { value: "analog", label: "Analogue" },
-                  { value: "digital", label: "Digital" },
+                  { value: "analog", label: "指针" },
+                  { value: "digital", label: "数字" },
                 ]}
                 onChange={(v) => void style({ options: { ...opts, analog: v === "analog" } })}
               />
               <AeroToggle
-                label="Show seconds"
+                label="显示秒数"
                 checked={opts.seconds}
                 onChange={(v) => void style({ options: { ...opts, seconds: v } })}
               />
               <AeroToggle
-                label="24 hour"
+                label="24 小时制"
                 checked={opts.twentyFourHour}
                 onChange={(v) => void style({ options: { ...opts, twentyFourHour: v } })}
               />
@@ -127,31 +127,31 @@ function WidgetRow({
           {widget.kind === "weather" && (
             <>
               <AeroSegmented<string>
-                label="Units"
+                label="单位"
                 value={opts.celsius ? "c" : "f"}
                 options={[
-                  { value: "c", label: "Celsius" },
-                  { value: "f", label: "Fahrenheit" },
+                  { value: "c", label: "摄氏度" },
+                  { value: "f", label: "华氏度" },
                 ]}
                 onChange={(v) => void style({ options: { ...opts, celsius: v === "c" } })}
               />
               <label className="ctl-row">
-                <span className="ctl-label">Place name</span>
+                <span className="ctl-label">地点名称</span>
                 <input
                   className="ctl-text"
                   defaultValue={opts.place ?? ""}
-                  placeholder="Shown under the temperature"
+                  placeholder="显示在温度下方"
                   onBlur={(e) => void style({ options: { ...opts, place: e.target.value || null } })}
                 />
               </label>
               <div className="ctl-row">
-                <span className="ctl-label">Latitude, longitude</span>
+                <span className="ctl-label">纬度、经度</span>
                 <div className="ctl-actions">
                   <input
                     className="ctl-text ctl-text-short"
                     defaultValue={opts.latitude ?? ""}
                     placeholder="51.5"
-                    aria-label="Latitude"
+                    aria-label="纬度"
                     onBlur={(e) =>
                       void style({
                         options: {
@@ -165,7 +165,7 @@ function WidgetRow({
                     className="ctl-text ctl-text-short"
                     defaultValue={opts.longitude ?? ""}
                     placeholder="-0.13"
-                    aria-label="Longitude"
+                    aria-label="经度"
                     onBlur={(e) =>
                       void style({
                         options: {
@@ -179,8 +179,7 @@ function WidgetRow({
               </div>
               {!allowWeather && (
                 <p className="settings-note">
-                  Weather stays offline until you allow it below. Nothing is
-                  requested before then.
+                  允许联网之前，天气小组件不会发送请求。
                 </p>
               )}
             </>
@@ -192,11 +191,11 @@ function WidgetRow({
               onClick={() =>
                 ipc
                   .removeWidget(widget.id)
-                  .then(() => onStatus("ok", `Removed the ${def?.label ?? "widget"}.`))
-                  .catch(fail("Could not remove the widget"))
+                  .then(() => onStatus("ok", `已移除${def?.label ?? "小组件"}。`))
+                  .catch(fail("无法移除小组件"))
               }
             >
-              Remove
+              移除
             </button>
           </div>
         </div>
@@ -207,31 +206,30 @@ function WidgetRow({
 
 export function WidgetsCard({ settings, onStatus }: Props) {
   const w = settings.widgets;
-  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}: ${e}`);
+  const fail = (what: string) => (e: unknown) => onStatus("error", `${what}：${e}`);
   const hasWeather = w.widgets.some((x) => x.kind === "weather");
 
   return (
     <section className="settings-card glass">
-      <h2>Desktop widgets</h2>
+      <h2>桌面小组件</h2>
       <AeroToggle
-        label="Show widgets on the desktop"
+        label="在桌面上显示小组件"
         checked={w.enabled}
-        hint="Draggable glass widgets that sit on the wallpaper"
+        hint="在壁纸上显示可拖动的玻璃小组件"
         onChange={(v) =>
           ipc
             .enableWidgets(v)
             .then(() =>
-              onStatus("ok", v ? "Widgets are on the desktop." : "Widgets are off."),
+              onStatus("ok", v ? "已显示桌面小组件。" : "已关闭桌面小组件。"),
             )
-            .catch(fail("Could not change widgets"))
+            .catch(fail("无法更改小组件设置"))
         }
       />
 
       {w.enabled && (
         <>
           <p className="settings-note">
-            Drag a widget to move it, and drag its bottom right corner to
-            resize. Everywhere else on the desktop keeps working normally.
+            拖动小组件可移动位置，拖动右下角可调整大小。桌面的其他区域可以照常使用。
           </p>
 
           <div className="mode-list">
@@ -246,7 +244,7 @@ export function WidgetsCard({ settings, onStatus }: Props) {
           </div>
 
           <div className="ctl-row ctl-row-stacked">
-            <span className="ctl-label">Add a widget</span>
+            <span className="ctl-label">添加小组件</span>
             <div className="widget-add">
               {WIDGETS.map((def) => (
                 <button
@@ -256,8 +254,8 @@ export function WidgetsCard({ settings, onStatus }: Props) {
                   onClick={() =>
                     ipc
                       .addWidget(def.kind as WidgetKind)
-                      .then(() => onStatus("ok", `Added the ${def.label}.`))
-                      .catch(fail("Could not add the widget"))
+                      .then(() => onStatus("ok", `已添加${def.label}。`))
+                      .catch(fail("无法添加小组件"))
                   }
                 >
                   {def.label}
@@ -267,27 +265,24 @@ export function WidgetsCard({ settings, onStatus }: Props) {
           </div>
 
           <AeroToggle
-            label="Let the weather widget use the network"
+            label="允许天气小组件联网"
             checked={w.allowWeatherNetwork}
-            hint="Nothing else in Aero Dock makes any network request"
+            hint="Aero Dock 的其他功能不会发送网络请求"
             onChange={(v) =>
               ipc
                 .allowWeatherNetwork(v)
                 .then(() =>
                   onStatus(
                     "ok",
-                    v ? "Weather may now fetch conditions." : "Weather is offline again.",
+                    v ? "天气小组件现在可以获取天气信息。" : "天气小组件已停止联网。",
                   ),
                 )
-                .catch(fail("Could not change that"))
+                .catch(fail("无法更改设置"))
             }
           />
           <p className="settings-note">
-            Weather is the only widget that leaves your machine. With this on
-            it asks Open-Meteo for conditions at the coordinates you set, and
-            sends nothing else. There is no account and no key. Everything
-            else here runs entirely offline
-            {hasWeather ? "." : ", and no weather widget is on the desktop yet."}
+            开启后，天气小组件会把你设置的坐标发送给 Open-Meteo 查询天气。它不会发送其他信息，也无需账户或密钥。其余功能均可离线使用
+            {hasWeather ? "." : "，目前桌面上还没有天气小组件。"}
           </p>
         </>
       )}

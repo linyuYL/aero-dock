@@ -111,20 +111,20 @@ export function WidgetCluster({ showClock = true, showStatus = true }: WidgetClu
     hydrate();
   }, [hydrate]);
 
-  const time = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const date = now.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+  const time = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  const date = now.toLocaleDateString("zh-CN", { weekday: "short", month: "short", day: "numeric" });
 
   const onVolumeWheel = (e: React.WheelEvent) => {
     if (!status?.volume.available) return;
     const next = Math.max(0, Math.min(100, status.volume.level + (e.deltaY < 0 ? 4 : -4)));
-    ipc.setVolume(next).catch(notify.on("Could not change the volume"));
+    ipc.setVolume(next).catch(notify.on("无法调整音量"));
   };
 
   const binTooltip = status
     ? status.recycleBin.items === 0
-      ? "Recycle Bin (empty)"
-      : `Recycle Bin — ${status.recycleBin.items} item${status.recycleBin.items === 1 ? "" : "s"}`
-    : "Recycle Bin";
+      ? "回收站（空）"
+      : `回收站 · ${status.recycleBin.items} 个项目`
+    : "回收站";
 
   if (!showClock && !showStatus) return null;
 
@@ -141,11 +141,11 @@ export function WidgetCluster({ showClock = true, showStatus = true }: WidgetClu
         {status?.battery.present && (
           <button
             className="widget-chip widget-chip-button"
-            title={`Battery ${status.battery.percent}%${status.battery.charging ? " (charging)" : ""} — click for power settings`}
+            title={`电量 ${status.battery.percent}%${status.battery.charging ? "（正在充电）" : ""}，点击打开电源设置`}
             onClick={() =>
               ipc
                 .launch("ms-settings:batterysaver")
-                .catch(notify.on("Could not open power settings"))
+                .catch(notify.on("无法打开电源设置"))
             }
           >
             <BatteryGlyph percent={status.battery.percent} charging={status.battery.charging} />
@@ -153,9 +153,9 @@ export function WidgetCluster({ showClock = true, showStatus = true }: WidgetClu
         )}
         <button
           className="widget-chip widget-chip-button"
-          title={`${status?.internet ? "Connected" : "No internet"} — click for network settings`}
+          title={`${status?.internet ? "已连接" : "无网络连接"}，点击打开网络设置`}
           onClick={() =>
-            ipc.launch("ms-settings:network").catch(notify.on("Could not open network settings"))
+            ipc.launch("ms-settings:network").catch(notify.on("无法打开网络设置"))
           }
         >
           <NetworkGlyph online={status?.internet ?? false} />
@@ -163,12 +163,12 @@ export function WidgetCluster({ showClock = true, showStatus = true }: WidgetClu
         {status?.volume.available && (
           <button
             className="widget-chip widget-chip-button"
-            title={`Volume ${status.volume.level}%${status.volume.muted ? " (muted)" : ""} — scroll to adjust, click to mute`}
+            title={`音量 ${status.volume.level}%${status.volume.muted ? "（已静音）" : ""}，滚动可调节，点击可静音`}
             onWheel={onVolumeWheel}
             onClick={() =>
               ipc
                 .setVolume(undefined, !status.volume.muted)
-                .catch(notify.on("Could not change the volume"))
+                .catch(notify.on("无法调整音量"))
             }
           >
             <VolumeGlyph level={status.volume.level} muted={status.volume.muted} />
@@ -176,11 +176,11 @@ export function WidgetCluster({ showClock = true, showStatus = true }: WidgetClu
         )}
         <button
           className="widget-chip widget-chip-button"
-          title={`${binTooltip} — click to open, right-click to empty`}
-          onClick={() => ipc.openRecycleBin().catch(notify.on("Could not open the Recycle Bin"))}
+          title={`${binTooltip}，点击打开，右键清空`}
+          onClick={() => ipc.openRecycleBin().catch(notify.on("无法打开回收站"))}
           onContextMenu={(e) => {
             e.preventDefault();
-            ipc.emptyRecycleBin().catch(notify.on("Could not empty the Recycle Bin"));
+            ipc.emptyRecycleBin().catch(notify.on("无法清空回收站"));
           }}
         >
           <BinGlyph full={(status?.recycleBin.items ?? 0) > 0} />

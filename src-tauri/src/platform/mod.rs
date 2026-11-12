@@ -36,10 +36,20 @@ pub struct ComApartment {
 #[cfg(windows)]
 impl ComApartment {
     pub fn new() -> Self {
-        use ::windows::Win32::System::Com::{CoInitializeEx, COINIT_APARTMENTTHREADED};
+        use ::windows::Win32::System::Com::COINIT_APARTMENTTHREADED;
+        Self::with_mode(COINIT_APARTMENTTHREADED)
+    }
+
+    pub fn multithreaded() -> Self {
+        use ::windows::Win32::System::Com::COINIT_MULTITHREADED;
+        Self::with_mode(COINIT_MULTITHREADED)
+    }
+
+    fn with_mode(mode: ::windows::Win32::System::Com::COINIT) -> Self {
+        use ::windows::Win32::System::Com::CoInitializeEx;
         // S_FALSE (already initialized) still requires a matching uninit;
         // only a real failure (e.g. wrong apartment mode) skips the drop.
-        let hr = unsafe { CoInitializeEx(None, COINIT_APARTMENTTHREADED) };
+        let hr = unsafe { CoInitializeEx(None, mode) };
         Self {
             initialized: hr.is_ok(),
         }

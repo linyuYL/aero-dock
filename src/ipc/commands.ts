@@ -30,6 +30,14 @@ export const ipc = {
   setSettings: (settings: Settings) => invoke<Settings>("set_settings", { settings }),
   pinItem: (item: PinnedItem, index?: number) =>
     invoke<Settings>("pin_item", { item, index: index ?? null }),
+  importPin: (id: string, kind: string, target: string, name: string) =>
+    invoke<Settings>("import_pin", { id, kind, target, name }),
+  renamePin: (id: string, name: string) =>
+    invoke<Settings>("rename_pin", { id, name }),
+  setPinIcon: (id: string, path: string | null) =>
+    invoke<Settings>("set_pin_icon", { id, path }),
+  pickPinPath: (folder: boolean, icon = false) =>
+    invoke<string | null>("pick_pin_path", { folder, icon }),
   unpinItem: (id: string) => invoke<Settings>("unpin_item", { id }),
   reorderPinned: (ids: string[]) => invoke<Settings>("reorder_pinned", { ids }),
   firstRunImport: (items: PinnedItem[]) =>
@@ -69,6 +77,7 @@ export const ipc = {
   // running windows
   getRunning: () => invoke<RunningSnapshot>("get_running"),
   activateWindow: (hwnd: number) => invoke<void>("activate_window", { hwnd }),
+  toggleWindow: (hwnd: number) => invoke<void>("toggle_window", { hwnd }),
   minimizeWindow: (hwnd: number) => invoke<void>("minimize_window", { hwnd }),
   closeWindow: (hwnd: number) => invoke<void>("close_window", { hwnd }),
 
@@ -148,7 +157,7 @@ export const ipc = {
     invoke<boolean>("widget_media_control", { action }),
 
   // dock window
-  resizeDock: (width: number, height: number) =>
-    invoke<void>("resize_dock", { width, height }),
+  resizeDock: (width: number, height: number, visibleWidth: number, visibleHeight: number) =>
+    invoke<void>("resize_dock", { width, height, visibleWidth, visibleHeight }),
   listMonitors: () => invoke<MonitorInfoEx[]>("list_monitors"),
 };

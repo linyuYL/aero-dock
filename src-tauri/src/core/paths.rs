@@ -67,6 +67,10 @@ pub fn data_dir(app: &AppHandle) -> AeroResult<PathBuf> {
     Ok(resolve(app.path().app_data_dir()?))
 }
 
+pub fn icon_cache_dir(app: &AppHandle) -> AeroResult<PathBuf> {
+    Ok(data_dir(app)?.join("icons"))
+}
+
 /// WebView2 writes its own profile somewhere too, and by default that is
 /// under `%LOCALAPPDATA%`. Portable runs point it inside the data folder so
 /// the host machine keeps nothing.

@@ -46,7 +46,7 @@ export const notify = {
     if (error !== undefined) console.error(what, error);
     useToasts
       .getState()
-      .push(error === undefined ? what : `${what}: ${describe(error)}`, "error");
+      .push(error === undefined ? what : `${what}：${describe(error)}`, "error");
   },
   info(message: string): void {
     useToasts.getState().push(message, "info");

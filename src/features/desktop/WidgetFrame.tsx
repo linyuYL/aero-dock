@@ -181,7 +181,7 @@ export function WidgetFrame({ widget, allowNetwork, onGeometry, onDragState, edi
       {editing && !widget.locked && (
         <span
           className="aero-widget-resize"
-          title="Drag to resize"
+          title="拖动可调整大小"
           onPointerDown={(e) => begin(e, "resize")}
           onPointerMove={move}
           onPointerUp={end}

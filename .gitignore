@@ -62,6 +62,8 @@ desktop.ini
 $RECYCLE.BIN/
 
 # ---- local artifacts ----
+/便携版/
+/data/
 /screenshots-local/
 *.orig
 *.rej

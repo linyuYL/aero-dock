@@ -23,38 +23,38 @@ export function resolveGlyph(name: string, glyph: string): string {
 
 /** Ordered by theme so related icons sit together in the wrapped grid. */
 const PRESETS: { glyph: string; label: string }[] = [
-  { glyph: "💼", label: "Briefcase" },
-  { glyph: "📊", label: "Chart" },
-  { glyph: "📝", label: "Notes" },
-  { glyph: "🗂️", label: "Files" },
-  { glyph: "📅", label: "Calendar" },
-  { glyph: "🏢", label: "Office" },
-  { glyph: "✉️", label: "Mail" },
-  { glyph: "🎯", label: "Focus" },
-  { glyph: "💻", label: "Code" },
-  { glyph: "🛠️", label: "Tools" },
-  { glyph: "🧩", label: "Pieces" },
-  { glyph: "⚙️", label: "Settings" },
-  { glyph: "🎨", label: "Design" },
-  { glyph: "✏️", label: "Draw" },
-  { glyph: "🧪", label: "Experiment" },
-  { glyph: "🚀", label: "Launch" },
-  { glyph: "🎮", label: "Games" },
-  { glyph: "🕹️", label: "Arcade" },
-  { glyph: "🎧", label: "Headphones" },
-  { glyph: "🎵", label: "Music" },
-  { glyph: "🎬", label: "Film" },
-  { glyph: "📷", label: "Photos" },
-  { glyph: "📺", label: "Watching" },
-  { glyph: "🎲", label: "Dice" },
-  { glyph: "🫧", label: "Bubbles" },
-  { glyph: "🌊", label: "Water" },
-  { glyph: "🌿", label: "Leaf" },
-  { glyph: "☀️", label: "Day" },
-  { glyph: "🌙", label: "Night" },
-  { glyph: "⚡", label: "Fast" },
-  { glyph: "⭐", label: "Star" },
-  { glyph: "🏠", label: "Home" },
+  { glyph: "💼", label: "公文包" },
+  { glyph: "📊", label: "图表" },
+  { glyph: "📝", label: "笔记" },
+  { glyph: "🗂️", label: "文件" },
+  { glyph: "📅", label: "日历" },
+  { glyph: "🏢", label: "办公" },
+  { glyph: "✉️", label: "邮件" },
+  { glyph: "🎯", label: "专注" },
+  { glyph: "💻", label: "编程" },
+  { glyph: "🛠️", label: "工具" },
+  { glyph: "🧩", label: "拼图" },
+  { glyph: "⚙️", label: "设置" },
+  { glyph: "🎨", label: "设计" },
+  { glyph: "✏️", label: "绘画" },
+  { glyph: "🧪", label: "实验" },
+  { glyph: "🚀", label: "发射" },
+  { glyph: "🎮", label: "游戏" },
+  { glyph: "🕹️", label: "街机" },
+  { glyph: "🎧", label: "耳机" },
+  { glyph: "🎵", label: "音乐" },
+  { glyph: "🎬", label: "电影" },
+  { glyph: "📷", label: "照片" },
+  { glyph: "📺", label: "观看" },
+  { glyph: "🎲", label: "骰子" },
+  { glyph: "🫧", label: "气泡" },
+  { glyph: "🌊", label: "水滴" },
+  { glyph: "🌿", label: "叶子" },
+  { glyph: "☀️", label: "白天" },
+  { glyph: "🌙", label: "夜晚" },
+  { glyph: "⚡", label: "闪电" },
+  { glyph: "⭐", label: "星星" },
+  { glyph: "🏠", label: "主页" },
 ];
 
 interface Props {
@@ -77,8 +77,8 @@ export function ModeIconPicker({ name, glyph, onChange }: Props) {
           type="button"
           className="icon-picker-option"
           data-active={!chosen}
-          title={`Use the letter ${letter}`}
-          aria-label={`Use the letter ${letter}`}
+          title={`使用字母 ${letter}`}
+          aria-label={`使用字母 ${letter}`}
           onClick={() => onChange("")}
         >
           {letter}
@@ -104,8 +104,8 @@ export function ModeIconPicker({ name, glyph, onChange }: Props) {
           className="ctl-text ctl-text-short"
           value={custom}
           maxLength={4}
-          placeholder="Other"
-          aria-label="Custom icon"
+          placeholder="其他"
+          aria-label="自定义图标"
           onChange={(e) => setCustom(e.target.value)}
           onKeyDown={(e) => {
             if (e.key !== "Enter" || !custom.trim()) return;
@@ -123,10 +123,10 @@ export function ModeIconPicker({ name, glyph, onChange }: Props) {
             setCustom("");
           }}
         >
-          Use
+          使用
         </button>
         {chosen && !PRESETS.some((p) => p.glyph === chosen) && (
-          <span className="settings-note">Currently {chosen}</span>
+          <span className="settings-note">当前 {chosen}</span>
         )}
       </div>
     </div>

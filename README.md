@@ -1,3 +1,11 @@
+## 简体中文桌面坞分支
+
+本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，包含简体中文界面、无底板应用入口、项目导入和图标管理，以及窗口预览与桌面显示修复。使用与构建方法见 [简体中文说明](README.zh-CN.md)。
+
+原项目作者为 Ryan Panda，许可证为 [MIT](LICENSE)。本分支由 [linyuYL](https://github.com/linyuYL) 维护。
+
+---
+
 <div align="center">
 
 <img src="src-tauri/icons/128x128.png" width="96" alt="Aero Dock icon" />

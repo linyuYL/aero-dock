@@ -102,23 +102,23 @@ export function FolderFlyout({ edge }: FolderFlyoutProps) {
             <button
               className="folder-flyout-open"
               onClick={() => {
-                ipc.launch(item.target).catch(notify.on(`Could not open ${item.name}`));
+                ipc.launch(item.target).catch(notify.on(`无法打开 ${item.name}`));
                 close();
               }}
             >
-              Open in Explorer
+              在资源管理器中打开
             </button>
           </div>
           <div className="folder-flyout-grid" style={{ gridTemplateColumns: `repeat(${COLUMNS}, 1fr)` }}>
             {entries === null && (
               <span className="folder-flyout-empty">
                 <span className="flyout-spinner" aria-hidden />
-                Reading folder…
+                正在读取文件夹…
               </span>
             )}
             {entries?.length === 0 && (
               <span className="folder-flyout-empty" data-tone={failed ? "error" : undefined}>
-                {failed ? "This folder could not be read" : "Nothing in this folder"}
+                {failed ? "无法读取此文件夹" : "此文件夹为空"}
               </span>
             )}
             {entries?.map((entry, i) => (
@@ -129,7 +129,7 @@ export function FolderFlyout({ edge }: FolderFlyoutProps) {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 transition={{ ...springs.bloom, delay: Math.min(i * 0.022, 0.35) }}
                 onClick={() => {
-                  ipc.launch(entry.path).catch(notify.on(`Could not open ${entry.name}`));
+                  ipc.launch(entry.path).catch(notify.on(`无法打开 ${entry.name}`));
                   close();
                 }}
                 title={entry.name}

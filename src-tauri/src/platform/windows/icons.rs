@@ -4,7 +4,10 @@
 //! path hash. The WebView loads them over the asset protocol, so each
 //! icon crosses IPC exactly zero times.
 
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::{Path, PathBuf};
+
+use parking_lot::Mutex;
 
 use windows::core::PCWSTR;
 use windows::Win32::Foundation::SIZE;
@@ -23,13 +26,23 @@ use crate::platform::ComApartment;
 const ICON_SIZE: i32 = 256;
 
 /// Bump when the pixels a given path produces change, so upgrades do not
-/// keep serving icons rendered by the previous rules. v2 added the
-/// normalisation pass in `normalize_icon`.
-const CACHE_VERSION: u32 = 2;
+/// keep serving icons rendered by the previous rules.
+const CACHE_VERSION: u32 = 3;
+const CUSTOM_PREFIX: &str = "custom-icon:";
+static CUSTOM_ICON_WRITE: Mutex<()> = Mutex::new(());
 
 /// Return the cached PNG path for `target`, extracting it on first use.
 /// Call from `spawn_blocking`.
 pub fn ensure_icon(target: &str, cache_dir: &Path) -> AeroResult<PathBuf> {
+    if let Some(key) = target.strip_prefix(CUSTOM_PREFIX) {
+        if key.len() == 16 && key.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            let path = cache_dir.join(format!("pin-{key}.png"));
+            if path.is_file() {
+                return Ok(path);
+            }
+        }
+        return Err(AeroError::other("自定义图标文件不存在。"));
+    }
     let key = path_key(target);
     let png_path = cache_dir.join(format!("{key}-v{CACHE_VERSION}.png"));
     if png_path.exists() {
@@ -41,6 +54,31 @@ pub fn ensure_icon(target: &str, cache_dir: &Path) -> AeroResult<PathBuf> {
     let rgba = normalize_icon(extract_rgba(target)?);
     rgba.save_with_format(&png_path, image::ImageFormat::Png)?;
     Ok(png_path)
+}
+
+pub fn save_custom_icon(path: &Path, cache_dir: &Path) -> AeroResult<String> {
+    let mut reader = image::ImageReader::open(path)?.with_guessed_format()?;
+    let mut limits = image::Limits::default();
+    limits.max_image_width = Some(4096);
+    limits.max_image_height = Some(4096);
+    reader.limits(limits);
+    let rgba = reader.decode()?.into_rgba8();
+    if alpha_bounds(&rgba, 9).is_none() {
+        return Err(AeroError::other("图标没有可见内容。"));
+    }
+    let rgba = normalize_icon(rgba);
+    let mut hasher = DefaultHasher::new();
+    rgba.as_raw().hash(&mut hasher);
+    let key = format!("{:016x}", hasher.finish());
+    let path = cache_dir.join(format!("pin-{key}.png"));
+    let _write = CUSTOM_ICON_WRITE.lock();
+    if !path.is_file() {
+        std::fs::create_dir_all(cache_dir)?;
+        let temp = path.with_extension("tmp");
+        rgba.save_with_format(&temp, image::ImageFormat::Png)?;
+        std::fs::rename(temp, path)?;
+    }
+    Ok(format!("{CUSTOM_PREFIX}{key}"))
 }
 
 fn extract_rgba(target: &str) -> AeroResult<image::RgbaImage> {
@@ -72,11 +110,11 @@ const SMALL_CONTENT_RATIO: f32 = 0.62;
 
 /// Bounding box of the non-transparent pixels, as (x0, y0, x1, y1) with
 /// the far edges exclusive. `None` when the image is fully transparent.
-fn alpha_bounds(img: &image::RgbaImage) -> Option<(u32, u32, u32, u32)> {
+fn alpha_bounds(img: &image::RgbaImage, min_alpha: u8) -> Option<(u32, u32, u32, u32)> {
     let (w, h) = img.dimensions();
     let (mut x0, mut y0, mut x1, mut y1) = (w, h, 0u32, 0u32);
     for (x, y, px) in img.enumerate_pixels() {
-        if px.0[3] > 8 {
+        if px.0[3] >= min_alpha {
             x0 = x0.min(x);
             y0 = y0.min(y);
             x1 = x1.max(x + 1);
@@ -109,17 +147,26 @@ pub fn normalize_icon(img: image::RgbaImage) -> image::RgbaImage {
     if w == 0 || h == 0 {
         return img;
     }
-    let Some((x0, y0, x1, y1)) = alpha_bounds(&img) else {
+    let Some((x0, y0, x1, y1)) = alpha_bounds(&img, 9) else {
         return img; // fully transparent, nothing to measure
     };
 
-    let (cw, ch) = (x1 - x0, y1 - y0);
-    let ratio = cw.max(ch) as f32 / w.max(h) as f32;
+    let is_small = |(x0, y0, x1, y1): (u32, u32, u32, u32)| {
+        (x1 - x0).max(y1 - y0) as f32 / (w.max(h) as f32) < SMALL_CONTENT_RATIO
+    };
+    let bounds = (x0, y0, x1, y1);
+    let crop = if is_small(bounds) {
+        Some(bounds)
+    } else {
+        // Explorer can frame a tiny icon in a large, faint outline. Measure
+        // the solid drawing separately so that outline does not set the scale.
+        alpha_bounds(&img, 128).filter(|&solid| is_small(solid))
+    };
 
     // Only crop when the drawing is genuinely marooned. Well-formed icons
     // keep the padding their designer chose.
-    let content = if ratio < SMALL_CONTENT_RATIO {
-        image::imageops::crop_imm(&img, x0, y0, cw, ch).to_image()
+    let content = if let Some((x0, y0, x1, y1)) = crop {
+        image::imageops::crop_imm(&img, x0, y0, x1 - x0, y1 - y0).to_image()
     } else {
         img
     };
@@ -228,13 +275,13 @@ mod tests {
     #[test]
     fn alpha_bounds_finds_the_drawn_region() {
         let img = canvas(64, 20, 24, 8, 10);
-        assert_eq!(alpha_bounds(&img), Some((20, 24, 28, 34)));
+        assert_eq!(alpha_bounds(&img, 9), Some((20, 24, 28, 34)));
     }
 
     #[test]
     fn alpha_bounds_is_none_when_empty() {
         let img = image::RgbaImage::from_pixel(32, 32, image::Rgba([0, 0, 0, 0]));
-        assert_eq!(alpha_bounds(&img), None);
+        assert_eq!(alpha_bounds(&img, 9), None);
     }
 
     #[test]
@@ -246,6 +293,17 @@ mod tests {
         // after cropping, the drawing fills the canvas, so the corners
         // are now opaque rather than empty padding
         assert!(out.get_pixel(4, 4).0[3] > 8, "content should reach the edges");
+    }
+
+    #[test]
+    fn faint_frame_does_not_keep_a_small_icon_small() {
+        let mut img = canvas(256, 92, 92, 72, 72);
+        for x in 0..256 {
+            img.put_pixel(x, 0, image::Rgba([255, 255, 255, 77]));
+            img.put_pixel(x, 255, image::Rgba([255, 255, 255, 77]));
+        }
+        let out = normalize_icon(img);
+        assert_eq!(*out.get_pixel(4, 4), image::Rgba([10, 120, 220, 255]));
     }
 
     #[test]
