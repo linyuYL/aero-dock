@@ -1,8 +1,10 @@
 ## 简体中文桌面坞分支
 
-本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，包含简体中文界面、无底板应用入口、项目导入和图标管理，以及窗口预览与桌面显示修复。使用与构建方法见 [简体中文说明](README.zh-CN.md)。
+本分支基于 [TheAgencyMGE/aero-dock](https://github.com/TheAgencyMGE/aero-dock) v1.3.2，修改为简中,对dock风格进行修改。使用与构建方法见 [简体中文说明](README.zh-CN.md)。
 
-原项目作者为 Ryan Panda，许可证为 [MIT](LICENSE)。本分支由 [linyuYL](https://github.com/linyuYL) 维护。
+原项目作者为 Ryan Panda，许可证为 [MIT](LICENSE).<img width="399" height="292" alt="703070352-fd2f85fb-04db-429f-a602-d955733a0c4b" src="https://github.com/user-attachments/assets/6918b2ba-4cad-4117-8bb4-d064b023eedb" />
+<img width="695" height="76" alt="703069999-5e29daa8-99ad-4e06-bdc1-b678d7e4b814" src="https://github.com/user-attachments/assets/78e97044-88f8-4759-8088-843f68101d1b" />
+
 
 ---
 
